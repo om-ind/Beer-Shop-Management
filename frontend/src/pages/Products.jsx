@@ -3,12 +3,17 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import Navbar from "../components/Navbar";
 import ProductTable from "../components/ProductTable";
+import ProductModal from "../components/ProductModal";
 
-import { getProducts } from "../services/productService";
+import {
+    getProducts,
+    addProduct,
+    deleteProduct,
+} from "../services/productService";
 
 export default function Products() {
-
     const [products, setProducts] = useState([]);
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         loadProducts();
@@ -23,6 +28,40 @@ export default function Products() {
         }
     }
 
+    async function handleSave(product) {
+        try {
+            await addProduct(product);
+
+            setShowModal(false);
+
+            loadProducts();
+
+            alert("Product Added Successfully");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to Add Product");
+        }
+    }
+
+    async function handleDelete(id) {
+        const confirmDelete = window.confirm(
+            "Are you sure you want to delete this product?"
+        );
+
+        if (!confirmDelete) return;
+
+        try {
+            await deleteProduct(id);
+
+            alert("Product deleted successfully.");
+
+            loadProducts();
+        } catch (error) {
+            console.error(error);
+            alert("Failed to delete product.");
+        }
+    }
+
     return (
         <AdminLayout>
 
@@ -34,13 +73,27 @@ export default function Products() {
                     Products
                 </h2>
 
-                <button className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">
+                <button
+                    onClick={() => setShowModal(true)}
+                    className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+                >
                     + Add Product
                 </button>
 
             </div>
 
-            <ProductTable products={products} />
+            <ProductTable
+                products={products}
+                onEdit={() => { }}
+                onDelete={handleDelete}
+            />
+
+            {showModal && (
+                <ProductModal
+                    onClose={() => setShowModal(false)}
+                    onSave={handleSave}
+                />
+            )}
 
         </AdminLayout>
     );
