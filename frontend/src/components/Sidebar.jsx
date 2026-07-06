@@ -1,3 +1,4 @@
+import { NavLink } from "react-router-dom";
 import {
     FaHome,
     FaBox,
@@ -10,14 +11,14 @@ import {
 } from "react-icons/fa";
 
 const menu = [
-    { icon: <FaHome />, label: "Dashboard" },
-    { icon: <FaBox />, label: "Products" },
-    { icon: <FaShoppingCart />, label: "Sales" },
-    { icon: <FaTruck />, label: "Purchases" },
-    { icon: <FaUsers />, label: "Customers" },
-    { icon: <FaChartBar />, label: "Reports" },
-    { icon: <FaRobot />, label: "Analytics" },
-    { icon: <FaCog />, label: "Settings" },
+    { icon: <FaHome />, label: "Dashboard", path: "/dashboard" },
+    { icon: <FaBox />, label: "Products", path: "/products" },
+    { icon: <FaShoppingCart />, label: "Sales", path: "/sales" },
+    { icon: <FaTruck />, label: "Purchases", path: "/purchases" },
+    { icon: <FaUsers />, label: "Customers", path: "/customers" },
+    { icon: <FaChartBar />, label: "Reports", path: "/reports" },
+    { icon: <FaRobot />, label: "Analytics", path: "/analytics" },
+    { icon: <FaCog />, label: "Settings", path: "/settings" },
 ];
 
 export default function Sidebar() {
@@ -27,13 +28,17 @@ export default function Sidebar() {
 
             <nav className="space-y-2">
                 {menu.map((item) => (
-                    <button
+                    <NavLink
                         key={item.label}
-                        className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-slate-700 transition"
+                        to={item.path}
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 w-full p-3 rounded-lg transition ${isActive ? "bg-blue-600" : "hover:bg-slate-700"
+                            }`
+                        }
                     >
                         {item.icon}
                         <span>{item.label}</span>
-                    </button>
+                    </NavLink>
                 ))}
             </nav>
         </aside>
