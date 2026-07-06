@@ -6,8 +6,10 @@ from routes.auth import auth_bp
 from routes.purchase import purchase_bp
 from routes.dashboard import dashboard_bp
 from routes.analytics import analytics_bp
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 app.register_blueprint(inventory_bp)
 app.register_blueprint(sales_bp)
