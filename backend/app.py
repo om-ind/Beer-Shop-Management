@@ -3,12 +3,14 @@ from flask import Flask
 from routes.inventory import inventory_bp
 from routes.sales import sales_bp
 from routes.auth import auth_bp
+from routes.purchase import purchase_bp
 
 app = Flask(__name__)
 
 app.register_blueprint(inventory_bp)
 app.register_blueprint(sales_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(purchase_bp)
 
 @app.route("/")
 def home():
