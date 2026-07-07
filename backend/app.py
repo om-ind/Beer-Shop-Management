@@ -8,6 +8,7 @@ from routes.dashboard import dashboard_bp
 from routes.analytics import analytics_bp
 from routes.products import products_bp
 from routes.customer import customers_bp
+from routes.supplier import supplier_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -21,6 +22,7 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(customers_bp)
+app.register_blueprint(supplier_bp)
 
 
 @app.route("/")
