@@ -1,6 +1,7 @@
 import jwt
 from datetime import datetime, timedelta
 from config import SECRET_KEY, JWT_EXPIRATION_HOURS
+from jwt import ExpiredSignatureError, InvalidTokenError
 
 
 def generate_token(user):
@@ -17,5 +18,5 @@ def generate_token(user):
 def verify_token(token):
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-    except:
+    except (ExpiredSignatureError, InvalidTokenError):
         return None
