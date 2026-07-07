@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function ProductModal({ onClose, onSave }) {
+export default function ProductModal({
+    product,
+    onClose,
+    onSave,
+}) {
     const [form, setForm] = useState({
         barcode: "",
         name: "",
@@ -12,6 +16,36 @@ export default function ProductModal({ onClose, onSave }) {
         minimum_stock: "",
         expiry_date: "",
     });
+
+    useEffect(() => {
+        if (product) {
+            setForm({
+                barcode: product.barcode || "",
+                name: product.name || "",
+                brand: product.brand || "",
+                category: product.category || "",
+                purchase_price: product.purchase_price || "",
+                selling_price: product.selling_price || "",
+                stock: product.stock || "",
+                minimum_stock: product.minimum_stock || "",
+                expiry_date: product.expiry_date
+                    ? product.expiry_date.substring(0, 10)
+                    : "",
+            });
+        } else {
+            setForm({
+                barcode: "",
+                name: "",
+                brand: "",
+                category: "Beer",
+                purchase_price: "",
+                selling_price: "",
+                stock: "",
+                minimum_stock: "",
+                expiry_date: "",
+            });
+        }
+    }, [product]);
 
     function handleChange(e) {
         setForm({
@@ -26,97 +60,121 @@ export default function ProductModal({ onClose, onSave }) {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
-            <div className="bg-white rounded-xl p-6 w-[500px] shadow-xl">
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+            <div className="bg-white rounded-xl shadow-xl w-[550px] p-6">
 
-                <h2 className="text-2xl font-bold mb-4">
-                    Add Product
+                <h2 className="text-2xl font-bold mb-5">
+                    {product ? "Edit Product" : "Add Product"}
                 </h2>
 
-                <form onSubmit={handleSubmit} className="space-y-3">
+                <form
+                    onSubmit={handleSubmit}
+                    className="grid grid-cols-2 gap-4"
+                >
 
                     <input
+                        type="text"
                         name="barcode"
                         placeholder="Barcode"
+                        value={form.barcode}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
+                        type="text"
                         name="name"
                         placeholder="Product Name"
+                        value={form.name}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
+                        type="text"
                         name="brand"
                         placeholder="Brand"
+                        value={form.brand}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
+                        type="text"
                         name="category"
                         placeholder="Category"
+                        value={form.category}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
                         type="number"
                         name="purchase_price"
                         placeholder="Purchase Price"
+                        value={form.purchase_price}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
                         type="number"
                         name="selling_price"
                         placeholder="Selling Price"
+                        value={form.selling_price}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
                         type="number"
                         name="stock"
                         placeholder="Stock"
+                        value={form.stock}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
                         type="number"
                         name="minimum_stock"
                         placeholder="Minimum Stock"
+                        value={form.minimum_stock}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2"
+                        required
                     />
 
                     <input
                         type="date"
                         name="expiry_date"
+                        value={form.expiry_date}
                         onChange={handleChange}
-                        className="w-full border p-2 rounded"
+                        className="border rounded p-2 col-span-2"
                     />
 
-                    <div className="flex justify-end gap-3">
+                    <div className="col-span-2 flex justify-end gap-3 mt-4">
 
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 bg-gray-300 rounded"
+                            className="bg-gray-400 text-white px-5 py-2 rounded-lg"
                         >
                             Cancel
                         </button>
 
                         <button
                             type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg"
                         >
-                            Save Product
+                            {product ? "Update Product" : "Save Product"}
                         </button>
 
                     </div>
