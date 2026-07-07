@@ -2,11 +2,13 @@ from flask import Blueprint, jsonify
 from database import get_connection
 from flask import request
 from datetime import datetime
+from utils.auth_middleware import token_required
 
 purchase_bp = Blueprint("purchase", __name__)
 
 
 @purchase_bp.route("/purchases", methods=["GET"])
+@token_required
 def get_purchases():
 
     conn = get_connection()
@@ -37,6 +39,7 @@ from flask import request
 from datetime import datetime
 
 @purchase_bp.route("/purchases", methods=["POST"])
+@token_required
 def create_purchase():
 
     data = request.get_json()
@@ -130,3 +133,9 @@ def create_purchase():
 
         cursor.close()
         conn.close()
+        
+    return {
+        "success": True,
+        "purchase_id": purchase_id,
+        "invoice_number": invoice_number
+    }

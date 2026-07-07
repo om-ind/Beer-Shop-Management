@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
 from database import get_connection
-
+from utils.auth_middleware import token_required
 products_bp = Blueprint("products", __name__)
 
 @products_bp.route("/products/search", methods=["GET"])
+@token_required
 def search_products():
     keyword = request.args.get("q", "")
 
