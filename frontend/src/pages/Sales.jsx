@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 
 import AdminLayout from "../layouts/AdminLayout";
 import Navbar from "../components/Navbar";
+import InvoiceModal from "../components/InvoiceModal";
+import Receipt from "../components/Receipt";
+import ProductSearch from "../components/Sales/ProductSearch";
 
 import {
     searchProducts,
@@ -25,6 +28,12 @@ export default function Sales() {
     const [selectedCustomer, setSelectedCustomer] = useState(1);
 
     const [paymentMode, setPaymentMode] = useState("Cash");
+
+    const [invoiceNo, setInvoiceNo] = useState("");
+
+    const [showInvoice, setShowInvoice] = useState(false);
+
+    const [receiptItems, setReceiptItems] = useState([]);
 
     useEffect(() => {
 
@@ -224,11 +233,11 @@ export default function Sales() {
 
             const result = await createSale(sale);
 
-            alert(
+            setInvoiceNo(result.invoice_no);
 
-                `Sale Completed\nInvoice : ${result.invoice_no}`
+            setShowInvoice(true);
 
-            );
+            setReceiptItems(cart);
 
             setCart([]);
 
@@ -278,18 +287,9 @@ export default function Sales() {
 
                 {/* Search */}
 
-                <input
-
-                    type="text"
-
-                    placeholder="Search Product or Scan Barcode"
-
-                    value={keyword}
-
-                    onChange={handleSearch}
-
-                    className="w-full border rounded-lg p-3 mb-5"
-
+                <ProductSearch
+                    keyword={keyword}
+                    onSearch={handleSearch}
                 />
 
                 {/* Search Results */}
@@ -673,6 +673,42 @@ export default function Sales() {
                 </div>
 
             </div>
+
+            {
+                showInvoice && (
+
+                    <InvoiceModal
+
+                        invoice={invoiceNo}
+
+                        total={total}
+
+                        customer={
+                            customers.find(
+                                c => c.id === selectedCustomer
+                            )?.name
+                        }
+
+                        payment={paymentMode}
+
+                        onClose={() => setShowInvoice(false)}
+
+                    />
+
+                )
+            }
+
+            <Receipt
+                invoice={invoiceNo}
+                customer={
+                    customers.find(
+                        c => c.id === selectedCustomer
+                    )?.name || "Walk-in Customer"
+                }
+                payment={paymentMode}
+                items={receiptItems}
+                total={total}
+            />
 
         </AdminLayout>
 
