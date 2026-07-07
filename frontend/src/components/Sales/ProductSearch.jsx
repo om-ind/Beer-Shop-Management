@@ -1,10 +1,8 @@
 export default function ProductSearch({
     keyword,
-    onSearch
+    onSearch,
 }) {
-
     return (
-
         <input
             type="text"
             value={keyword}
@@ -12,7 +10,5 @@ export default function ProductSearch({
             placeholder="Search Product or Scan Barcode"
             className="w-full border rounded-lg p-3 mb-5"
         />
-
     );
-
 }
