@@ -39,19 +39,23 @@ export default function Purchases() {
 
         try {
 
-            await createPurchase(purchase);
+            const result = await createPurchase(purchase);
 
-            alert("Purchase Created Successfully");
+            alert(
+                `Purchase Saved\nInvoice: ${result.invoice_number}`
+            );
 
             setShowModal(false);
 
             loadPurchases();
 
-        } catch (err) {
+        }
+
+        catch (err) {
 
             console.error(err);
 
-            alert("Failed to Create Purchase");
+            alert("Failed to save purchase.");
 
         }
 
