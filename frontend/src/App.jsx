@@ -1,44 +1,144 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
-import Customers from "./pages/Customers";
 import Sales from "./pages/Sales";
 import Purchases from "./pages/Purchases";
+import Customers from "./pages/Customers";
+import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
-import Analytics from "./pages/Analytics";
+import Users from "./pages/Users";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+import RoleProtectedRoute from "./components/RoleProtectedRoute";
 
 function App() {
+
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Login */}
-        <Route path="/" element={<Login />} />
 
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
+    <Routes>
 
-        {/* Products */}
-        <Route path="/products" element={<Products />} />
+      {/* Public Route */}
 
-        {/* Customers */}
-        <Route path="/customers" element={<Customers />} />
+      <Route
+        path="/login"
+        element={<Login />}
+      />
 
-        {/* Sales */}
-        <Route path="/sales" element={<Sales />} />
+      {/* Redirect */}
 
-        {/* Purchases */}
-        <Route path="/purchases" element={<Purchases />} />
+      <Route
+        path="/"
+        element={<Navigate to="/dashboard" replace />}
+      />
 
-        {/* Reports */}
-        <Route path="/reports" element={<Reports />} />
+      {/* Dashboard */}
 
-        {/* Analytics */}
-        <Route path="/analytics" element={<Analytics />} />
-      </Routes>
-    </BrowserRouter>
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Products */}
+
+      <Route
+        path="/products"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner", "Manager"]}
+          >
+            <Products />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* Sales */}
+
+      <Route
+        path="/sales"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner", "Manager", "Cashier"]}
+          >
+            <Sales />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* Purchases */}
+
+      <Route
+        path="/purchases"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner", "Manager"]}
+          >
+            <Purchases />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* Customers */}
+
+      <Route
+        path="/customers"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner", "Manager", "Cashier"]}
+          >
+            <Customers />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* Suppliers */}
+
+      <Route
+        path="/suppliers"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner", "Manager"]}
+          >
+            <Suppliers />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* Reports */}
+
+      <Route
+        path="/reports"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner", "Manager"]}
+          >
+            <Reports />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* Users */}
+
+      <Route
+        path="/users"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Owner"]}
+          >
+            <Users />
+          </RoleProtectedRoute>
+        }
+      />
+
+    </Routes>
+
   );
+
 }
 
 export default App;

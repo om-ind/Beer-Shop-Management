@@ -4,10 +4,6 @@ from flask import g
 from utils.jwt_helper import verify_token
 
 
-print(g.user["username"])
-print(g.user["role"])
-
-
 def token_required(f):
 
     @wraps(f)

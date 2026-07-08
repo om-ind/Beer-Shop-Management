@@ -8,6 +8,7 @@ import {
     FaChartBar,
     FaRobot,
     FaCog,
+    FaUserSecret,
 } from "react-icons/fa";
 
 const menu = [
@@ -19,6 +20,7 @@ const menu = [
     { icon: <FaChartBar />, label: "Reports", path: "/reports" },
     { icon: <FaRobot />, label: "Analytics", path: "/analytics" },
     { icon: <FaCog />, label: "Settings", path: "/settings" },
+    { icon: <FaUserSecret />, label: "Suppliers", path: "/suppliers" },
 ];
 
 export default function Sidebar() {
