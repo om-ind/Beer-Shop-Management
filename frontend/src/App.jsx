@@ -11,6 +11,7 @@ import Reports from "./pages/Reports";
 import Users from "./pages/Users";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import CashRegister from "./pages/CashRegister";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
@@ -138,6 +139,16 @@ function App() {
                         <ProtectedRoute>
                             <Settings />
                         </ProtectedRoute>
+                    }
+                />
+
+                {/* Cash Register — Owner, Manager */}
+                <Route
+                    path="/cash-register"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <CashRegister />
+                        </RoleProtectedRoute>
                     }
                 />
 
