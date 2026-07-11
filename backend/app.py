@@ -10,6 +10,7 @@ from routes.products import products_bp
 from routes.customer import customers_bp
 from routes.supplier import supplier_bp
 from routes.report import report_bp
+from routes.users import users_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -25,6 +26,7 @@ app.register_blueprint(products_bp)
 app.register_blueprint(customers_bp)
 app.register_blueprint(supplier_bp)
 app.register_blueprint(report_bp)
+app.register_blueprint(users_bp)
 
 
 @app.route("/")

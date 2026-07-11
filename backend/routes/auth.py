@@ -64,3 +64,67 @@ def login():
             "full_name": user["full_name"]
         }
     })
+
+
+@auth_bp.route("/auth/change-password", methods=["PUT"])
+def change_password():
+
+    data = request.get_json()
+
+    username = data.get("username")
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+
+    if not username or not current_password or not new_password:
+        return jsonify({
+            "success": False,
+            "message": "All fields are required"
+        }), 400
+
+    if len(new_password) < 6:
+        return jsonify({
+            "success": False,
+            "message": "New password must be at least 6 characters"
+        }), 400
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute(
+        "SELECT * FROM users WHERE username = %s",
+        (username,)
+    )
+
+    user = cursor.fetchone()
+
+    if user is None:
+        cursor.close()
+        conn.close()
+        return jsonify({
+            "success": False,
+            "message": "User not found"
+        }), 404
+
+    if not bcrypt.checkpw(current_password.encode(), user["password"].encode()):
+        cursor.close()
+        conn.close()
+        return jsonify({
+            "success": False,
+            "message": "Current password is incorrect"
+        }), 401
+
+    hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+
+    cursor.execute(
+        "UPDATE users SET password = %s WHERE username = %s",
+        (hashed, username)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "message": "Password changed successfully"
+    })

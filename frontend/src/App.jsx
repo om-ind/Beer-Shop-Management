@@ -9,135 +9,141 @@ import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
 import Users from "./pages/Users";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
 
-  return (
+    return (
+        <>
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+            />
 
-    <Routes>
+            <Routes>
 
-      {/* Public Route */}
+                {/* Public */}
+                <Route path="/login" element={<Login />} />
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+                {/* Redirect root */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      {/* Redirect */}
+                {/* Dashboard — all roles */}
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
+                />
 
-      <Route
-        path="/"
-        element={<Navigate to="/dashboard" replace />}
-      />
+                {/* Products — Owner, Manager */}
+                <Route
+                    path="/products"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <Products />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      {/* Dashboard */}
+                {/* Sales — all roles */}
+                <Route
+                    path="/sales"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager", "Cashier"]}>
+                            <Sales />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+                {/* Purchases — Owner, Manager */}
+                <Route
+                    path="/purchases"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <Purchases />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      {/* Products */}
+                {/* Customers — all roles */}
+                <Route
+                    path="/customers"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager", "Cashier"]}>
+                            <Customers />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      <Route
-        path="/products"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner", "Manager"]}
-          >
-            <Products />
-          </RoleProtectedRoute>
-        }
-      />
+                {/* Suppliers — Owner, Manager */}
+                <Route
+                    path="/suppliers"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <Suppliers />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      {/* Sales */}
+                {/* Reports — Owner, Manager */}
+                <Route
+                    path="/reports"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <Reports />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      <Route
-        path="/sales"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner", "Manager", "Cashier"]}
-          >
-            <Sales />
-          </RoleProtectedRoute>
-        }
-      />
+                {/* Analytics — Owner, Manager */}
+                <Route
+                    path="/analytics"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <Analytics />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      {/* Purchases */}
+                {/* Users — Owner only */}
+                <Route
+                    path="/users"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner"]}>
+                            <Users />
+                        </RoleProtectedRoute>
+                    }
+                />
 
-      <Route
-        path="/purchases"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner", "Manager"]}
-          >
-            <Purchases />
-          </RoleProtectedRoute>
-        }
-      />
+                {/* Settings — all roles */}
+                <Route
+                    path="/settings"
+                    element={
+                        <ProtectedRoute>
+                            <Settings />
+                        </ProtectedRoute>
+                    }
+                />
 
-      {/* Customers */}
-
-      <Route
-        path="/customers"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner", "Manager", "Cashier"]}
-          >
-            <Customers />
-          </RoleProtectedRoute>
-        }
-      />
-
-      {/* Suppliers */}
-
-      <Route
-        path="/suppliers"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner", "Manager"]}
-          >
-            <Suppliers />
-          </RoleProtectedRoute>
-        }
-      />
-
-      {/* Reports */}
-
-      <Route
-        path="/reports"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner", "Manager"]}
-          >
-            <Reports />
-          </RoleProtectedRoute>
-        }
-      />
-
-      {/* Users */}
-
-      <Route
-        path="/users"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Owner"]}
-          >
-            <Users />
-          </RoleProtectedRoute>
-        }
-      />
-
-    </Routes>
-
-  );
+            </Routes>
+        </>
+    );
 
 }
 
