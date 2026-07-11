@@ -12,12 +12,14 @@ import {
     FaUserSecret,
     FaSignOutAlt,
     FaUserShield,
+    FaWallet,
 } from "react-icons/fa";
 
 const ALL_MENU = [
     { icon: <FaHome />, label: "Dashboard", path: "/dashboard", roles: ["Owner", "Manager", "Cashier"] },
     { icon: <FaBox />, label: "Products", path: "/products", roles: ["Owner", "Manager"] },
     { icon: <FaShoppingCart />, label: "Sales", path: "/sales", roles: ["Owner", "Manager", "Cashier"] },
+    { icon: <FaWallet />, label: "Cash Register", path: "/cash-register", roles: ["Owner", "Manager"] },
     { icon: <FaTruck />, label: "Purchases", path: "/purchases", roles: ["Owner", "Manager"] },
     { icon: <FaUsers />, label: "Customers", path: "/customers", roles: ["Owner", "Manager", "Cashier"] },
     { icon: <FaUserSecret />, label: "Suppliers", path: "/suppliers", roles: ["Owner", "Manager"] },

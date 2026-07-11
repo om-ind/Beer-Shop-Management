@@ -11,6 +11,9 @@ from routes.customer import customers_bp
 from routes.supplier import supplier_bp
 from routes.report import report_bp
 from routes.users import users_bp
+from routes.invoice import invoice_bp
+from routes.cash_register import cash_register_bp
+from routes.supplier_bills import supplier_bills_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -27,6 +30,9 @@ app.register_blueprint(customers_bp)
 app.register_blueprint(supplier_bp)
 app.register_blueprint(report_bp)
 app.register_blueprint(users_bp)
+app.register_blueprint(invoice_bp)
+app.register_blueprint(cash_register_bp)
+app.register_blueprint(supplier_bills_bp)
 
 
 @app.route("/")
