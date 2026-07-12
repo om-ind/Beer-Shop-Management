@@ -19,3 +19,13 @@ export async function deleteSupplier(id) {
     const response = await api.delete(`/suppliers/${id}`);
     return response.data;
 }
+
+export async function checkSupplierLinks(id) {
+    const response = await api.get(`/suppliers/${id}/check`);
+    return response.data;
+}
+
+export async function forceDeleteSupplier(id) {
+    const response = await api.delete(`/suppliers/${id}?force=true`);
+    return response.data;
+}

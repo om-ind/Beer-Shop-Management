@@ -19,3 +19,13 @@ export async function deleteProduct(id) {
     const response = await api.delete(`/products/${id}`);
     return response.data;
 }
+
+export async function checkProductLinks(id) {
+    const response = await api.get(`/products/${id}/check`);
+    return response.data;
+}
+
+export async function forceDeleteProduct(id) {
+    const response = await api.delete(`/products/${id}?force=true`);
+    return response.data;
+}

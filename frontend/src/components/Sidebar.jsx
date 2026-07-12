@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from "react";
+import { getLowStockProducts } from "../services/lowStockService";
 import {
     FaHome,
     FaBox,
@@ -13,6 +15,8 @@ import {
     FaSignOutAlt,
     FaUserShield,
     FaWallet,
+    FaReceipt,
+    FaExclamationTriangle,
 } from "react-icons/fa";
 
 const ALL_MENU = [
@@ -23,6 +27,8 @@ const ALL_MENU = [
     { icon: <FaTruck />, label: "Purchases", path: "/purchases", roles: ["Owner", "Manager"] },
     { icon: <FaUsers />, label: "Customers", path: "/customers", roles: ["Owner", "Manager", "Cashier"] },
     { icon: <FaUserSecret />, label: "Suppliers", path: "/suppliers", roles: ["Owner", "Manager"] },
+    { icon: <FaExclamationTriangle />, label: "Low Stock", path: "/low-stock", roles: ["Owner", "Manager"], badge: true },
+    { icon: <FaReceipt />, label: "Expenses", path: "/expenses", roles: ["Owner", "Manager"] },
     { icon: <FaChartBar />, label: "Reports", path: "/reports", roles: ["Owner", "Manager"] },
     { icon: <FaRobot />, label: "Analytics", path: "/analytics", roles: ["Owner", "Manager"] },
     { icon: <FaUserShield />, label: "Users", path: "/users", roles: ["Owner"] },
@@ -38,6 +44,13 @@ const ROLE_STYLE = {
 export default function Sidebar() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [lowStockCount, setLowStockCount] = useState(0);
+
+    useEffect(() => {
+        getLowStockProducts()
+            .then(data => setLowStockCount(data.length))
+            .catch(() => {});
+    }, []);
 
     const menu = ALL_MENU.filter(item =>
         !user || item.roles.includes(user.role)
@@ -73,7 +86,12 @@ export default function Sidebar() {
                         }
                     >
                         <span className="text-base">{item.icon}</span>
-                        <span>{item.label}</span>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && lowStockCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 shadow">
+                                {lowStockCount}
+                            </span>
+                        )}
                     </NavLink>
                 ))}
             </nav>

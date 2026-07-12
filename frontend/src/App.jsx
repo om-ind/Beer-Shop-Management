@@ -12,6 +12,8 @@ import Users from "./pages/Users";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import CashRegister from "./pages/CashRegister";
+import Expenses from "./pages/Expenses";
+import LowStock from "./pages/LowStock";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
@@ -148,6 +150,26 @@ function App() {
                     element={
                         <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
                             <CashRegister />
+                        </RoleProtectedRoute>
+                    }
+                />
+
+                {/* Expenses — Owner, Manager */}
+                <Route
+                    path="/expenses"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <Expenses />
+                        </RoleProtectedRoute>
+                    }
+                />
+
+                {/* Low Stock — Owner, Manager */}
+                <Route
+                    path="/low-stock"
+                    element={
+                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
+                            <LowStock />
                         </RoleProtectedRoute>
                     }
                 />

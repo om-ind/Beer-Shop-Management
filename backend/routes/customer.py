@@ -109,55 +109,89 @@ def update_customer(id):
 
 
 # --------------------------
+# CHECK CUSTOMER LINKS
+# --------------------------
+@customers_bp.route("/customers/<int:id>/check", methods=["GET"])
+def check_customer_links(id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT COUNT(*) AS cnt FROM sales WHERE customer_id = %s", (id,))
+        sales_count = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) AS cnt FROM credit_payments WHERE customer_id = %s", (id,))
+        payments_count = cursor.fetchone()["cnt"]
+
+        return jsonify({
+            "sales": sales_count,
+            "credit_payments": payments_count,
+            "has_links": sales_count > 0 or payments_count > 0
+        })
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# --------------------------
 # DELETE CUSTOMER
+# ?force=true cascades: credit_payments → sale_items → sales → customer
 # --------------------------
 @customers_bp.route("/customers/<int:id>", methods=["DELETE"])
 def delete_customer(id):
+    force = request.args.get("force", "false").lower() == "true"
 
     conn = None
     cursor = None
 
     try:
-
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute(
-            "DELETE FROM customers WHERE id=%s",
-            (id,)
-        )
+        if force:
+            # 1. Delete credit payments
+            cursor.execute("DELETE FROM credit_payments WHERE customer_id = %s", (id,))
 
-        conn.commit()
+            # 2. Get all sale IDs for this customer
+            cursor.execute("SELECT id FROM sales WHERE customer_id = %s", (id,))
+            sale_ids = [row[0] for row in cursor.fetchall()]
 
-        return {
-            "success": True,
-            "message": "Customer deleted successfully."
-        }, 200
+            # 3. Delete sale_items for those sales
+            if sale_ids:
+                placeholders = ",".join(["%s"] * len(sale_ids))
+                cursor.execute(f"DELETE FROM sale_items WHERE sale_id IN ({placeholders})", sale_ids)
+
+            # 4. Delete sales
+            cursor.execute("DELETE FROM sales WHERE customer_id = %s", (id,))
+
+            # 5. Delete the customer
+            cursor.execute("DELETE FROM customers WHERE id = %s", (id,))
+            conn.commit()
+
+            return {"success": True, "message": "Customer and all linked data deleted."}, 200
+
+        else:
+            # Safe delete — block if linked data exists
+            cursor.execute("SELECT COUNT(*) FROM sales WHERE customer_id = %s", (id,))
+            if cursor.fetchone()[0] > 0:
+                return {"success": False, "message": "Customer has sales history.", "has_links": True}, 400
+
+            cursor.execute("SELECT COUNT(*) FROM credit_payments WHERE customer_id = %s", (id,))
+            if cursor.fetchone()[0] > 0:
+                return {"success": False, "message": "Customer has credit records.", "has_links": True}, 400
+
+            cursor.execute("DELETE FROM customers WHERE id = %s", (id,))
+            conn.commit()
+
+            return {"success": True, "message": "Customer deleted successfully."}, 200
 
     except Error as e:
-
         if conn:
             conn.rollback()
-
-        message = str(e)
-
-        if "1451" in message:
-
-            return {
-                "success": False,
-                "message": "Customer has sales history and cannot be deleted."
-            }, 400
-
-        return {
-            "success": False,
-            "message": message
-        }, 400
+        return {"success": False, "message": str(e)}, 400
 
     finally:
-
         if cursor:
             cursor.close()
-
         if conn:
             conn.close()
 
