@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { FaHistory, FaEye, FaFilePdf, FaChevronLeft, FaChevronRight, FaTimes, FaReceipt } from "react-icons/fa";
+import { FaHistory, FaEye, FaFilePdf, FaChevronLeft, FaChevronRight, FaTimes, FaReceipt, FaDownload } from "react-icons/fa";
 import { getSales, getSaleDetail, downloadInvoice } from "../../services/salesService";
 
 function SaleDetailModal({ saleId, onClose }) {
@@ -130,6 +130,7 @@ export default function SalesHistory() {
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [viewingSale, setViewingSale] = useState(null);
+    const [downloadingId, setDownloadingId] = useState(null);
 
     useEffect(() => {
         loadSales();
@@ -144,6 +145,17 @@ export default function SalesHistory() {
             toast.error("Failed to load sales history");
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleRowDownload(sale) {
+        setDownloadingId(sale.id);
+        try {
+            await downloadInvoice(sale.id, sale.invoice_no);
+        } catch {
+            toast.error("PDF download failed — is reportlab installed?");
+        } finally {
+            setDownloadingId(null);
         }
     }
 
@@ -216,14 +228,27 @@ export default function SalesHistory() {
                                             {sale.sale_date ? new Date(sale.sale_date).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
                                         </td>
                                         <td className="px-5 py-3.5 text-center">
-                                            <button
-                                                id={`view-sale-${sale.id}`}
-                                                onClick={() => setViewingSale(sale.id)}
-                                                className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
-                                                title="View Details"
-                                            >
-                                                <FaEye />
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    id={`view-sale-${sale.id}`}
+                                                    onClick={() => setViewingSale(sale.id)}
+                                                    className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                                                    title="View Details"
+                                                >
+                                                    <FaEye />
+                                                </button>
+                                                <button
+                                                    id={`download-invoice-${sale.id}`}
+                                                    onClick={() => handleRowDownload(sale)}
+                                                    disabled={downloadingId === sale.id}
+                                                    className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                                                    title="Download Invoice PDF"
+                                                >
+                                                    {downloadingId === sale.id
+                                                        ? <div className="w-3 h-3 border-2 border-emerald-400 border-t-emerald-700 rounded-full animate-spin" />
+                                                        : <FaDownload />}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

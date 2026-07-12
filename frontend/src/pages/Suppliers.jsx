@@ -8,7 +8,7 @@ import {
     FaTruck, FaPlus, FaSearch, FaEdit, FaTrash,
     FaFileInvoice, FaExclamationTriangle, FaPhone, FaBuilding
 } from "react-icons/fa";
-import { getSuppliers, addSupplier, updateSupplier, deleteSupplier } from "../services/supplierService";
+import { getSuppliers, addSupplier, updateSupplier, deleteSupplier, checkSupplierLinks, forceDeleteSupplier } from "../services/supplierService";
 import { getSupplierBillsOverview } from "../services/supplierBillsService";
 
 export default function Suppliers() {
@@ -19,6 +19,7 @@ export default function Suppliers() {
     const [showModal, setShowModal] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [linkInfo, setLinkInfo] = useState(null);
     const [billsSupplier, setBillsSupplier] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -72,12 +73,30 @@ export default function Suppliers() {
         }
     }
 
-    async function confirmDelete() {
+    async function handleDeleteClick(supplier) {
+        setLinkInfo(null);
+        setDeleteConfirm(supplier);
+        // Fetch linked data in background
+        try {
+            const info = await checkSupplierLinks(supplier.id);
+            setLinkInfo(info);
+        } catch {
+            setLinkInfo({ purchases: 0, bills: 0, has_links: false });
+        }
+    }
+
+    async function confirmDelete(force = false) {
         if (!deleteConfirm) return;
         try {
-            await deleteSupplier(deleteConfirm.id);
-            toast.success(`"${deleteConfirm.name}" deleted`);
+            if (force) {
+                await forceDeleteSupplier(deleteConfirm.id);
+                toast.success(`"${deleteConfirm.name}" and all linked data deleted`);
+            } else {
+                await deleteSupplier(deleteConfirm.id);
+                toast.success(`"${deleteConfirm.name}" deleted`);
+            }
             setDeleteConfirm(null);
+            setLinkInfo(null);
             loadAll();
         } catch (err) {
             toast.error(err.response?.data?.message || "Cannot delete supplier");
@@ -229,9 +248,9 @@ export default function Suppliers() {
                                                     >
                                                         <FaEdit />
                                                     </button>
-                                                    <button
+                                                     <button
                                                         id={`delete-supplier-${supplier.id}`}
-                                                        onClick={() => setDeleteConfirm(supplier)}
+                                                        onClick={() => handleDeleteClick(supplier)}
                                                         className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                                                         title="Delete"
                                                     >
@@ -274,18 +293,58 @@ export default function Suppliers() {
                             <FaTrash className="text-red-500 text-xl" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Supplier?</h3>
-                        <p className="text-slate-500 text-sm mb-6">
+                        <p className="text-slate-500 text-sm mb-4">
                             Remove <strong>"{deleteConfirm.name}"</strong> permanently?
                         </p>
+
+                        {/* Linked data warning */}
+                        {linkInfo === null && (
+                            <div className="flex items-center justify-center gap-2 text-slate-400 text-sm mb-4">
+                                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
+                                Checking linked data...
+                            </div>
+                        )}
+
+                        {linkInfo?.has_links && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-left">
+                                <p className="text-red-700 text-xs font-semibold mb-2">⚠ This supplier has linked records:</p>
+                                <ul className="text-red-600 text-xs space-y-1">
+                                    {linkInfo.purchases > 0 && (
+                                        <li>• {linkInfo.purchases} purchase order{linkInfo.purchases > 1 ? 's' : ''}</li>
+                                    )}
+                                    {linkInfo.bills > 0 && (
+                                        <li>• {linkInfo.bills} supplier bill{linkInfo.bills > 1 ? 's' : ''}</li>
+                                    )}
+                                </ul>
+                                <p className="text-red-500 text-xs mt-2 font-medium">
+                                    Force delete will permanently remove all linked data.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
-                            <button onClick={() => setDeleteConfirm(null)}
-                                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition">
+                            <button
+                                onClick={() => { setDeleteConfirm(null); setLinkInfo(null); }}
+                                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition"
+                            >
                                 Cancel
                             </button>
-                            <button onClick={confirmDelete}
-                                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition">
-                                Delete
-                            </button>
+                            {linkInfo?.has_links ? (
+                                <button
+                                    onClick={() => confirmDelete(true)}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition text-sm"
+                                >
+                                    Force Delete All
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => confirmDelete(false)}
+                                    disabled={linkInfo === null}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-medium transition"
+                                >
+                                    Delete
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

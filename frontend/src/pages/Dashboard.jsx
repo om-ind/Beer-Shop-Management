@@ -13,6 +13,8 @@ import {
     FaCoins,
     FaStar,
     FaTrophy,
+    FaReceipt,
+    FaBalanceScale,
 } from "react-icons/fa";
 
 function KPICard({ title, value, icon, gradient, sub }) {
@@ -107,6 +109,24 @@ export default function Dashboard() {
                             value={fmt(dashboard.monthly_sales)}
                             icon={<FaTrophy />}
                             gradient="bg-gradient-to-br from-orange-500 to-amber-600"
+                        />
+                        <KPICard
+                            title="Monthly Expenses"
+                            value={fmt(dashboard.monthly_expenses)}
+                            icon={<FaReceipt />}
+                            gradient="bg-gradient-to-br from-rose-500 to-pink-700"
+                            sub="This month's operating costs"
+                        />
+                        <KPICard
+                            title="Net Profit"
+                            value={fmt(dashboard.net_profit)}
+                            icon={<FaBalanceScale />}
+                            gradient={
+                                dashboard.net_profit >= 0
+                                    ? "bg-gradient-to-br from-emerald-500 to-green-700"
+                                    : "bg-gradient-to-br from-red-500 to-rose-700"
+                            }
+                            sub="Monthly profit − expenses"
                         />
                     </div>
                 </div>

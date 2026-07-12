@@ -20,6 +20,16 @@ export async function deleteCustomer(id) {
     return response.data;
 }
 
+export async function checkCustomerLinks(id) {
+    const response = await api.get(`/customers/${id}/check`);
+    return response.data;
+}
+
+export async function forceDeleteCustomer(id) {
+    const response = await api.delete(`/customers/${id}?force=true`);
+    return response.data;
+}
+
 export async function getCreditHistory(customerId) {
     const response = await api.get(`/customers/${customerId}/credit-history`);
     return response.data;

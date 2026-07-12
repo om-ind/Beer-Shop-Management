@@ -8,7 +8,7 @@ import {
     FaUsers, FaPlus, FaSearch, FaEdit, FaTrash,
     FaWallet, FaPhone, FaHistory
 } from "react-icons/fa";
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from "../services/customerService";
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, checkCustomerLinks, forceDeleteCustomer } from "../services/customerService";
 
 export default function Customers() {
     const [customers, setCustomers] = useState([]);
@@ -17,6 +17,7 @@ export default function Customers() {
     const [showModal, setShowModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [linkInfo, setLinkInfo] = useState(null);
     const [creditCustomer, setCreditCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -64,12 +65,29 @@ export default function Customers() {
         }
     }
 
-    async function confirmDelete() {
+    async function handleDeleteClick(customer) {
+        setLinkInfo(null);
+        setDeleteConfirm(customer);
+        try {
+            const info = await checkCustomerLinks(customer.id);
+            setLinkInfo(info);
+        } catch {
+            setLinkInfo({ sales: 0, credit_payments: 0, has_links: false });
+        }
+    }
+
+    async function confirmDelete(force = false) {
         if (!deleteConfirm) return;
         try {
-            await deleteCustomer(deleteConfirm.id);
-            toast.success(`"${deleteConfirm.name}" removed`);
+            if (force) {
+                await forceDeleteCustomer(deleteConfirm.id);
+                toast.success(`"${deleteConfirm.name}" and all linked data removed`);
+            } else {
+                await deleteCustomer(deleteConfirm.id);
+                toast.success(`"${deleteConfirm.name}" removed`);
+            }
             setDeleteConfirm(null);
+            setLinkInfo(null);
             loadCustomers();
         } catch (err) {
             toast.error(err.response?.data?.message || "Delete failed");
@@ -237,7 +255,7 @@ export default function Customers() {
                                                     </button>
                                                     <button
                                                         id={`delete-customer-${customer.id}`}
-                                                        onClick={() => setDeleteConfirm(customer)}
+                                                        onClick={() => handleDeleteClick(customer)}
                                                         className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                                                         title="Delete"
                                                     >
@@ -280,22 +298,59 @@ export default function Customers() {
                             <FaTrash className="text-red-500 text-xl" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 mb-2">Remove Customer?</h3>
-                        <p className="text-slate-500 text-sm mb-6">
+                        <p className="text-slate-500 text-sm mb-4">
                             Delete <strong>"{deleteConfirm.name}"</strong> permanently?
                         </p>
+
+                        {/* Checking spinner */}
+                        {linkInfo === null && (
+                            <div className="flex items-center justify-center gap-2 text-slate-400 text-sm mb-4">
+                                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
+                                Checking linked data...
+                            </div>
+                        )}
+
+                        {/* Linked records warning */}
+                        {linkInfo?.has_links && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-left">
+                                <p className="text-red-700 text-xs font-semibold mb-2">⚠ This customer has linked records:</p>
+                                <ul className="text-red-600 text-xs space-y-1">
+                                    {linkInfo.sales > 0 && (
+                                        <li>• {linkInfo.sales} sale{linkInfo.sales > 1 ? 's' : ''} (invoices + items)</li>
+                                    )}
+                                    {linkInfo.credit_payments > 0 && (
+                                        <li>• {linkInfo.credit_payments} credit payment record{linkInfo.credit_payments > 1 ? 's' : ''}</li>
+                                    )}
+                                </ul>
+                                <p className="text-red-500 text-xs mt-2 font-medium">
+                                    Force delete will permanently remove all linked data.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setDeleteConfirm(null)}
+                                onClick={() => { setDeleteConfirm(null); setLinkInfo(null); }}
                                 className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition"
                             >
                                 Cancel
                             </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition"
-                            >
-                                Remove
-                            </button>
+                            {linkInfo?.has_links ? (
+                                <button
+                                    onClick={() => confirmDelete(true)}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition text-sm"
+                                >
+                                    Force Delete All
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => confirmDelete(false)}
+                                    disabled={linkInfo === null}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-medium transition"
+                                >
+                                    Remove
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

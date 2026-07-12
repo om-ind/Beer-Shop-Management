@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import ProductModal from "../components/ProductModal";
 import { toast } from "react-toastify";
 import { FaBox, FaPlus, FaSearch, FaEdit, FaTrash, FaExclamationTriangle } from "react-icons/fa";
-import { getProducts, addProduct, updateProduct, deleteProduct } from "../services/productService";
+import { getProducts, addProduct, updateProduct, deleteProduct, checkProductLinks, forceDeleteProduct } from "../services/productService";
 
 export default function Products() {
     const [products, setProducts] = useState([]);
@@ -13,6 +13,7 @@ export default function Products() {
     const [showModal, setShowModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [linkInfo, setLinkInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [categoryFilter, setCategoryFilter] = useState("All");
 
@@ -61,7 +62,8 @@ export default function Products() {
             setSelectedProduct(null);
             loadProducts();
         } catch (err) {
-            toast.error("Operation failed. Please try again.");
+            const msg = err.response?.data?.error || "Operation failed. Please try again.";
+            toast.error(msg);
         }
     }
 
@@ -70,12 +72,29 @@ export default function Products() {
         setShowModal(true);
     }
 
-    async function confirmDelete() {
+    async function handleDeleteClick(product) {
+        setLinkInfo(null);
+        setDeleteConfirm(product);
+        try {
+            const info = await checkProductLinks(product.id);
+            setLinkInfo(info);
+        } catch {
+            setLinkInfo({ sale_items: 0, purchase_items: 0, has_links: false });
+        }
+    }
+
+    async function confirmDelete(force = false) {
         if (!deleteConfirm) return;
         try {
-            await deleteProduct(deleteConfirm.id);
-            toast.success(`"${deleteConfirm.name}" deleted`);
+            if (force) {
+                await forceDeleteProduct(deleteConfirm.id);
+                toast.success(`"${deleteConfirm.name}" deleted (sales history kept)`);
+            } else {
+                await deleteProduct(deleteConfirm.id);
+                toast.success(`"${deleteConfirm.name}" deleted`);
+            }
             setDeleteConfirm(null);
+            setLinkInfo(null);
             loadProducts();
         } catch (err) {
             toast.error("Failed to delete product");
@@ -227,7 +246,7 @@ export default function Products() {
                                                     </button>
                                                     <button
                                                         id={`delete-product-${product.id}`}
-                                                        onClick={() => setDeleteConfirm(product)}
+                                                        onClick={() => handleDeleteClick(product)}
                                                         className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                                                         title="Delete"
                                                     >
@@ -261,22 +280,57 @@ export default function Products() {
                             <FaTrash className="text-red-500 text-xl" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Product?</h3>
-                        <p className="text-slate-500 text-sm mb-6">
-                            Are you sure you want to delete <strong>"{deleteConfirm.name}"</strong>? This action cannot be undone.
+                        <p className="text-slate-500 text-sm mb-4">
+                            Are you sure you want to delete <strong>"{deleteConfirm.name}"</strong>?
                         </p>
+
+                        {linkInfo === null && (
+                            <div className="flex items-center justify-center gap-2 text-slate-400 text-sm mb-4">
+                                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
+                                Checking linked data...
+                            </div>
+                        )}
+
+                        {linkInfo?.has_links && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-left">
+                                <p className="text-amber-700 text-xs font-semibold mb-2">⚠ This product is referenced in:</p>
+                                <ul className="text-amber-700 text-xs space-y-1">
+                                    {linkInfo.sale_items > 0 && (
+                                        <li>• {linkInfo.sale_items} sale record{linkInfo.sale_items > 1 ? 's' : ''}</li>
+                                    )}
+                                    {linkInfo.purchase_items > 0 && (
+                                        <li>• {linkInfo.purchase_items} purchase record{linkInfo.purchase_items > 1 ? 's' : ''}</li>
+                                    )}
+                                </ul>
+                                <p className="text-amber-600 text-xs mt-2">
+                                    Force delete keeps the history but removes the product.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setDeleteConfirm(null)}
+                                onClick={() => { setDeleteConfirm(null); setLinkInfo(null); }}
                                 className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition"
                             >
                                 Cancel
                             </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition shadow-lg shadow-red-600/30"
-                            >
-                                Delete
-                            </button>
+                            {linkInfo?.has_links ? (
+                                <button
+                                    onClick={() => confirmDelete(true)}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition text-sm"
+                                >
+                                    Force Delete
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => confirmDelete(false)}
+                                    disabled={linkInfo === null}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-medium transition shadow-lg shadow-red-600/30"
+                                >
+                                    Delete
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

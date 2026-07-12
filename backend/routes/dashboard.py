@@ -116,6 +116,33 @@ def dashboard():
 
         dashboard["highest_profit_brand"] = brand["brand"] if brand else "N/A"
 
+        # Monthly Profit (all time sum of profits for this month)
+        cursor.execute("""
+        SELECT IFNULL(SUM(si.profit),0) AS value
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        WHERE MONTH(s.sale_date)=MONTH(CURDATE())
+        AND YEAR(s.sale_date)=YEAR(CURDATE())
+        """)
+        monthly_profit = float(cursor.fetchone()["value"])
+        dashboard["monthly_profit"] = monthly_profit
+
+        # Monthly Expenses (safe even if table doesn't exist yet)
+        try:
+            cursor.execute("""
+            SELECT IFNULL(SUM(amount),0) AS value
+            FROM expenses
+            WHERE MONTH(expense_date)=MONTH(CURDATE())
+            AND YEAR(expense_date)=YEAR(CURDATE())
+            """)
+            monthly_expenses = float(cursor.fetchone()["value"])
+        except Exception:
+            monthly_expenses = 0.0
+        dashboard["monthly_expenses"] = monthly_expenses
+
+        # Net Profit = Monthly Profit - Monthly Expenses
+        dashboard["net_profit"] = round(monthly_profit - monthly_expenses, 2)
+
         return jsonify(dashboard)
 
     finally:
