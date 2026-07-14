@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../shared/widgets/loading_states.dart';
+import '../../core/utils/pdf_helper.dart';
+import '../../core/models/sale_model.dart';
 import 'sales_provider.dart';
 
 class SalesScreen extends ConsumerStatefulWidget {
@@ -42,6 +44,35 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
     } catch (_) {
       return dateStr;
+    }
+  }
+
+  Future<void> _printInvoice(WidgetRef ref, SaleModel saleSummary) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+
+      final api = ref.read(apiClientProvider);
+      final res = await api.get('/sales/${saleSummary.id}');
+      if (mounted) Navigator.pop(context); // Dismiss loading spinner
+
+      final fullSale = SaleModel.fromJson(res.data as Map<String, dynamic>);
+      await PdfHelper.generateAndPrintInvoice(fullSale);
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loading spinner
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load sale details: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -198,6 +229,13 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                             ),
                                             const Spacer(),
                                             _PaymentBadge(method: sale.paymentMethod),
+                                            const SizedBox(width: 8),
+                                            IconButton(
+                                              icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                                              onPressed: () => _printInvoice(ref, sale),
+                                              constraints: const BoxConstraints(),
+                                              padding: EdgeInsets.zero,
+                                            ),
                                           ],
                                         ),
                                       ],

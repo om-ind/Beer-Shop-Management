@@ -19,7 +19,7 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
   Future<void> load() async {
     state = const InventoryState(isLoading: true);
     try {
-      final res = await _api.get('/inventory');
+      final res = await _api.get('/products');
       final list = (res.data as List).map((e) => ProductModel.fromJson(e)).toList();
       state = InventoryState(products: list);
     } catch (e) {
@@ -29,21 +29,21 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
 
   Future<void> add(Map<String, dynamic> data) async {
     try {
-      await _api.post('/inventory', data: data);
+      await _api.post('/products', data: data);
       await load();
     } catch (_) {}
   }
 
   Future<void> update(int id, Map<String, dynamic> data) async {
     try {
-      await _api.put('/inventory/$id', data: data);
+      await _api.put('/products/$id', data: data);
       await load();
     } catch (_) {}
   }
 
   Future<void> delete(int id) async {
     try {
-      await _api.delete('/inventory/$id');
+      await _api.delete('/products/$id');
       state = InventoryState(products: state.products.where((p) => p.id != id).toList());
     } catch (_) {}
   }

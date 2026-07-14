@@ -1,5 +1,6 @@
 class SaleModel {
   final int id;
+  final String? invoiceNo;
   final String? customerName;
   final double totalAmount;
   final String paymentMethod;
@@ -9,6 +10,7 @@ class SaleModel {
 
   const SaleModel({
     required this.id,
+    this.invoiceNo,
     this.customerName,
     required this.totalAmount,
     required this.paymentMethod,
@@ -19,9 +21,10 @@ class SaleModel {
 
   factory SaleModel.fromJson(Map<String, dynamic> json) => SaleModel(
         id: json['id'] ?? 0,
+        invoiceNo: json['invoice_no'],
         customerName: json['customer_name'],
         totalAmount: _toDouble(json['total_amount']),
-        paymentMethod: json['payment_method'] ?? 'Cash',
+        paymentMethod: json['payment_method'] ?? json['payment_mode'] ?? 'Cash',
         saleDate: json['sale_date']?.toString() ?? '',
         status: json['status'],
         items: (json['items'] as List<dynamic>? ?? [])

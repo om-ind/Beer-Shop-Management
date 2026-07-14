@@ -115,7 +115,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 1.45,
+                      childAspectRatio: 1.25,
                     ),
                     delegate: SliverChildListDelegate([
                       StatCard(
