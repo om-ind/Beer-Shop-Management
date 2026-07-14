@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/models/product_model.dart';
+import '../../core/models/sale_model.dart';
 import '../../core/providers/auth_provider.dart';
 
 class CartItem {
@@ -80,31 +81,53 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
     state = const CashRegisterState();
   }
 
-  Future<bool> completeSale({
+  Future<SaleModel?> completeSale({
     required String paymentMethod,
     required double totalAmount,
     int? customerId,
   }) async {
     state = state.copyWith(isProcessing: true);
     try {
+      int? targetCustomerId = customerId;
+      if (targetCustomerId == null) {
+        final custRes = await _api.get('/customers');
+        final custData = custRes.data as List<dynamic>;
+        if (custData.isNotEmpty) {
+          targetCustomerId = custData.first['id'] as int?;
+        }
+      }
+
+      if (targetCustomerId == null) {
+        throw Exception("No customer found to associate the sale.");
+      }
+
       final saleItems = state.items.map((i) => {
         'product_id': i.productId,
         'quantity': i.qty,
-        'unit_price': i.unitPrice,
+        'selling_price': i.unitPrice,
       }).toList();
 
-      await _api.post('/sales', data: {
+      final res = await _api.post('/sales', data: {
         'items': saleItems,
         'total_amount': totalAmount,
-        'payment_method': paymentMethod,
-        if (customerId != null) 'customer_id': customerId,
+        'payment_mode': paymentMethod,
+        'customer_id': targetCustomerId,
       });
 
+      final resData = res.data as Map<String, dynamic>;
+      final saleId = resData['sale_id'] as int?;
+
+      SaleModel? completedSale;
+      if (saleId != null) {
+        final saleRes = await _api.get('/sales/$saleId');
+        completedSale = SaleModel.fromJson(saleRes.data as Map<String, dynamic>);
+      }
+
       state = const CashRegisterState();
-      return true;
+      return completedSale;
     } catch (_) {
       state = state.copyWith(isProcessing: false);
-      return false;
+      return null;
     }
   }
 }

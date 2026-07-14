@@ -5,9 +5,12 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/models/product_model.dart';
+import '../../core/models/sale_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../shared/widgets/loading_states.dart';
 import '../inventory/inventory_provider.dart';
+import '../customers/customers_provider.dart';
+import '../../core/utils/pdf_helper.dart';
 import 'cash_register_provider.dart';
 
 class CashRegisterScreen extends ConsumerStatefulWidget {
@@ -21,12 +24,14 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
   String _paymentMethod = 'Cash';
+  int? _selectedCustomerId;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(inventoryProvider.notifier).load();
+      ref.read(customersProvider.notifier).load();
     });
   }
 
@@ -43,6 +48,10 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
   Widget build(BuildContext context) {
     final inventoryState = ref.watch(inventoryProvider);
     final cartState = ref.watch(cashRegisterProvider);
+    final customersState = ref.watch(customersProvider);
+
+    final customers = customersState.customers;
+    final selectedCustomerId = _selectedCustomerId ?? (customers.isNotEmpty ? customers.first.id : null);
 
     final filtered = inventoryState.products.where((p) {
       if (_searchQuery.isEmpty) return true;
@@ -227,6 +236,42 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
                           ),
                           child: Column(
                             children: [
+                              // Customer Selector
+                              if (customers.isNotEmpty) ...[
+                                const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text('Customer', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 12)),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface2,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.divider, width: 0.5),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: selectedCustomerId,
+                                      isExpanded: true,
+                                      dropdownColor: AppColors.surface,
+                                      icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                                      items: customers.map((c) {
+                                        return DropdownMenuItem<int>(
+                                          value: c.id,
+                                          child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        setState(() => _selectedCustomerId = val);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -263,7 +308,7 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
                                 child: ElevatedButton(
                                   onPressed: cartState.items.isEmpty || cartState.isProcessing
                                       ? null
-                                      : () => _completeSale(subtotal),
+                                      : () => _completeSale(subtotal, selectedCustomerId),
                                   child: cartState.isProcessing
                                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                       : const Text('Complete Sale', style: TextStyle(fontSize: 13)),
@@ -284,19 +329,58 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
     );
   }
 
-  Future<void> _completeSale(double subtotal) async {
-    final success = await ref.read(cashRegisterProvider.notifier).completeSale(
+  Future<void> _completeSale(double subtotal, int? customerId) async {
+    final completedSale = await ref.read(cashRegisterProvider.notifier).completeSale(
           paymentMethod: _paymentMethod,
           totalAmount: subtotal,
+          customerId: customerId,
         );
-    if (success && mounted) {
+    if (completedSale != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
+        const SnackBar(
+          content: Row(
             children: [
               Icon(Icons.check_circle, color: AppColors.success),
               SizedBox(width: 8),
               Text('Sale completed successfully!'),
+            ],
+          ),
+          backgroundColor: AppColors.surface2,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      // Prompt to print invoice
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Print Receipt', style: TextStyle(color: AppColors.textPrimary)),
+          content: Text('Would you like to print or save the PDF receipt for Invoice ${completedSale.invoiceNo ?? completedSale.id}?', style: const TextStyle(color: AppColors.textSecondary)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                PdfHelper.generateAndPrintInvoice(completedSale!);
+              },
+              icon: const Icon(Icons.print, size: 18),
+              label: const Text('Print PDF'),
+            ),
+          ],
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Failed to complete sale. Please try again.'),
             ],
           ),
           backgroundColor: AppColors.surface2,

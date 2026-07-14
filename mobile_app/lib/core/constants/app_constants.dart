@@ -89,7 +89,7 @@ class AppSizes {
 class AppConstants {
   // API — use 10.0.2.2 for Android emulator (maps to host localhost)
   // Change to your LAN IP when testing on a real device
-  static const String baseUrl = 'http://10.0.2.2:5000';
+  static const String baseUrl = 'http://127.0.0.1:5000';
 
   // Storage keys
   static const String tokenKey = 'auth_token';

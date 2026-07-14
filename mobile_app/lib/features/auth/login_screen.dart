@@ -86,190 +86,198 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // Main content
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: SizedBox(
-                height: size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom - 24,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Spacer(),
-
-                    // Logo + Brand
-                    Center(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(28),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              gradient: AppColors.goldGradient,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
+                          const Spacer(),
+
+                          // Logo + Brand
+                          Center(
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    gradient: AppColors.goldGradient,
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.4),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.local_bar,
+                                    size: 44,
+                                    color: Colors.white,
+                                  ),
+                                )
+                                    .animate()
+                                    .scale(delay: 100.ms, duration: 400.ms, curve: Curves.easeOutBack),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Beer Shop',
+                                  style: Theme.of(context).textTheme.displayMedium,
+                                )
+                                    .animate()
+                                    .fadeIn(delay: 200.ms)
+                                    .slideY(begin: 0.2),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Management System',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                )
+                                    .animate()
+                                    .fadeIn(delay: 300.ms),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.local_bar,
-                              size: 44,
-                              color: Colors.white,
+                          ),
+
+                          const Spacer(),
+
+                          // Form card
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AppColors.divider, width: 0.5),
+                            ),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Welcome back',
+                                    style: Theme.of(context).textTheme.headlineLarge,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Sign in to your account',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // Error message
+                                  if (authState.error != null)
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(12),
+                                      margin: const EdgeInsets.only(bottom: 16),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.error.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.error_outline, color: AppColors.error, size: 16),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              authState.error!,
+                                              style: const TextStyle(color: AppColors.error, fontSize: 13),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                  // Username
+                                  TextFormField(
+                                    controller: _usernameCtrl,
+                                    keyboardType: TextInputType.text,
+                                    textInputAction: TextInputAction.next,
+                                    style: const TextStyle(color: AppColors.textPrimary),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Username',
+                                      prefixIcon: Icon(Icons.person_outline),
+                                    ),
+                                    validator: (v) =>
+                                        v == null || v.trim().isEmpty ? 'Username is required' : null,
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Password
+                                  TextFormField(
+                                    controller: _passwordCtrl,
+                                    obscureText: _obscurePassword,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) => _handleLogin(),
+                                    style: const TextStyle(color: AppColors.textPrimary),
+                                    decoration: InputDecoration(
+                                      labelText: 'Password',
+                                      prefixIcon: const Icon(Icons.lock_outline),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                        ),
+                                        onPressed: () =>
+                                            setState(() => _obscurePassword = !_obscurePassword),
+                                      ),
+                                    ),
+                                    validator: (v) =>
+                                        v == null || v.isEmpty ? 'Password is required' : null,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // Login button
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 52,
+                                    child: ElevatedButton(
+                                      onPressed: authState.isLoading ? null : _handleLogin,
+                                      child: authState.isLoading
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppColors.textOnPrimary,
+                                              ),
+                                            )
+                                          : const Text('Sign In'),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                               .animate()
-                              .scale(delay: 100.ms, duration: 400.ms, curve: Curves.easeOutBack),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Beer Shop',
-                            style: Theme.of(context).textTheme.displayMedium,
-                          )
-                              .animate()
-                              .fadeIn(delay: 200.ms)
-                              .slideY(begin: 0.2),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Management System',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          )
-                              .animate()
-                              .fadeIn(delay: 300.ms),
+                              .fadeIn(delay: 400.ms)
+                              .slideY(begin: 0.1),
+
+                          const Spacer(),
+
+                          // Footer
+                          Center(
+                            child: Text(
+                              'Beer Shop Management v1.0',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                         ],
                       ),
                     ),
-
-                    const Spacer(),
-
-                    // Form card
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppColors.divider, width: 0.5),
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Welcome back',
-                              style: Theme.of(context).textTheme.headlineLarge,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Sign in to your account',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Error message
-                            if (authState.error != null)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(12),
-                                margin: const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.error_outline, color: AppColors.error, size: 16),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        authState.error!,
-                                        style: const TextStyle(color: AppColors.error, fontSize: 13),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // Username
-                            TextFormField(
-                              controller: _usernameCtrl,
-                              keyboardType: TextInputType.text,
-                              textInputAction: TextInputAction.next,
-                              style: const TextStyle(color: AppColors.textPrimary),
-                              decoration: const InputDecoration(
-                                labelText: 'Username',
-                                prefixIcon: Icon(Icons.person_outline),
-                              ),
-                              validator: (v) =>
-                                  v == null || v.trim().isEmpty ? 'Username is required' : null,
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Password
-                            TextFormField(
-                              controller: _passwordCtrl,
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _handleLogin(),
-                              style: const TextStyle(color: AppColors.textPrimary),
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                  ),
-                                  onPressed: () =>
-                                      setState(() => _obscurePassword = !_obscurePassword),
-                                ),
-                              ),
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? 'Password is required' : null,
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Login button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52,
-                              child: ElevatedButton(
-                                onPressed: authState.isLoading ? null : _handleLogin,
-                                child: authState.isLoading
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: AppColors.textOnPrimary,
-                                        ),
-                                      )
-                                    : const Text('Sign In'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 400.ms)
-                        .slideY(begin: 0.1),
-
-                    const Spacer(),
-
-                    // Footer
-                    Center(
-                      child: Text(
-                        'Beer Shop Management v1.0',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ],

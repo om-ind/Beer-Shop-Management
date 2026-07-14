@@ -20,7 +20,11 @@ class SalesNotifier extends StateNotifier<SalesState> {
     state = const SalesState(isLoading: true);
     try {
       final res = await _api.get('/sales');
-      final list = (res.data as List).map((e) => SaleModel.fromJson(e)).toList();
+      final rawData = res.data;
+      final List<dynamic> salesList = rawData is Map<String, dynamic>
+          ? (rawData['sales'] as List<dynamic>? ?? [])
+          : (rawData as List<dynamic>);
+      final list = salesList.map((e) => SaleModel.fromJson(e)).toList();
       state = SalesState(sales: list);
     } catch (e) {
       state = SalesState(error: e.toString());

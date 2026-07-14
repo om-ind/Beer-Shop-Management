@@ -61,6 +61,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   void _showMoreDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -103,36 +104,43 @@ class _AppShellState extends ConsumerState<AppShell> {
               children: List.generate(items.length, (i) {
                 final item = items[i];
                 final isSelected = currentIndex == i;
-                return GestureDetector(
-                  onTap: () => _onNavTap(i),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withOpacity(0.12)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSelected ? item.activeIcon : item.icon,
-                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                          size: 24,
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: GestureDetector(
+                      onTap: () => _onNavTap(i),
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withOpacity(0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSelected ? item.activeIcon : item.icon,
+                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                              size: 22,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 );
@@ -174,48 +182,50 @@ class _MoreDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOwnerOrManager = user?.isOwnerOrManager == true;
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.divider,
-                borderRadius: BorderRadius.circular(2),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Text('More', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 16),
-
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              if (isOwnerOrManager) ...[
-                _DrawerTile(icon: Icons.calculate_outlined, label: 'Cash Register', onTap: () => onNavigate('/cash-register')),
-                _DrawerTile(icon: Icons.shopping_cart_outlined, label: 'Purchases', onTap: () => onNavigate('/purchases')),
-                _DrawerTile(icon: Icons.local_shipping_outlined, label: 'Suppliers', onTap: () => onNavigate('/suppliers')),
-                _DrawerTile(icon: Icons.bar_chart_outlined, label: 'Analytics', onTap: () => onNavigate('/analytics')),
-                _DrawerTile(icon: Icons.summarize_outlined, label: 'Reports', onTap: () => onNavigate('/reports')),
-                _DrawerTile(icon: Icons.receipt_long_outlined, label: 'Expenses', onTap: () => onNavigate('/expenses')),
-                _DrawerTile(icon: Icons.warning_amber_outlined, label: 'Low Stock', onTap: () => onNavigate('/low-stock')),
+            const SizedBox(height: 20),
+            Text('More', style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 16),
+  
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                if (isOwnerOrManager) ...[
+                  _DrawerTile(icon: Icons.calculate_outlined, label: 'Cash Register', onTap: () => onNavigate('/cash-register')),
+                  _DrawerTile(icon: Icons.shopping_cart_outlined, label: 'Purchases', onTap: () => onNavigate('/purchases')),
+                  _DrawerTile(icon: Icons.local_shipping_outlined, label: 'Suppliers', onTap: () => onNavigate('/suppliers')),
+                  _DrawerTile(icon: Icons.bar_chart_outlined, label: 'Analytics', onTap: () => onNavigate('/analytics')),
+                  _DrawerTile(icon: Icons.summarize_outlined, label: 'Reports', onTap: () => onNavigate('/reports')),
+                  _DrawerTile(icon: Icons.receipt_long_outlined, label: 'Expenses', onTap: () => onNavigate('/expenses')),
+                  _DrawerTile(icon: Icons.warning_amber_outlined, label: 'Low Stock', onTap: () => onNavigate('/low-stock')),
+                ],
+                if (user?.isOwner == true)
+                  _DrawerTile(icon: Icons.manage_accounts_outlined, label: 'Users', onTap: () => onNavigate('/users')),
+                _DrawerTile(icon: Icons.settings_outlined, label: 'Settings', onTap: () => onNavigate('/settings')),
+                _DrawerTile(icon: Icons.logout, label: 'Logout', onTap: onLogout, isDestructive: true),
               ],
-              if (user?.isOwner == true)
-                _DrawerTile(icon: Icons.manage_accounts_outlined, label: 'Users', onTap: () => onNavigate('/users')),
-              _DrawerTile(icon: Icons.settings_outlined, label: 'Settings', onTap: () => onNavigate('/settings')),
-              _DrawerTile(icon: Icons.logout, label: 'Logout', onTap: onLogout, isDestructive: true),
-            ],
-          ),
-          const SizedBox(height: 8),
-        ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

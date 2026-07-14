@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../constants/app_constants.dart';
+import '../constants/app_constants.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
