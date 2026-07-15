@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppColors {
   // Primary palette — amber/gold beer theme
@@ -89,7 +91,15 @@ class AppSizes {
 class AppConstants {
   // API — use 10.0.2.2 for Android emulator (maps to host localhost)
   // Change to your LAN IP when testing on a real device
-  static const String baseUrl = 'http://127.0.0.1:5000';
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:5000';
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:5000';
+    } else {
+      return 'http://127.0.0.1:5000';
+    }
+  }
 
   // Storage keys
   static const String tokenKey = 'auth_token';

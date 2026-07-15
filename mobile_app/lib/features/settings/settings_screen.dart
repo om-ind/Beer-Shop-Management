@@ -60,6 +60,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
+  void _showServerConfigDialog(BuildContext context) {
+    final controller = TextEditingController(text: ref.read(apiClientProvider).baseUrl);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Configure API Server', style: TextStyle(color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter the backend server URL. E.g. http://10.0.2.2:5000 for Android emulator.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Server Base URL',
+                  prefixIcon: Icon(Icons.dns_outlined),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newUrl = controller.text.trim();
+                if (newUrl.isNotEmpty) {
+                  await ref.read(apiClientProvider).updateBaseUrl(newUrl);
+                  if (mounted) {
+                    setState(() {});
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('API Server updated to: $newUrl')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -235,7 +288,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     _InfoRow(label: 'App Version', value: '1.0.0'),
                     const SizedBox(height: 10),
-                    _InfoRow(label: 'API Server', value: AppConstants.baseUrl),
+                    _InfoRow(
+                      label: 'API Server',
+                      value: ref.watch(apiClientProvider).baseUrl,
+                      onTap: () => _showServerConfigDialog(context),
+                    ),
                   ],
                 ),
               ),
@@ -270,16 +327,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-  const _InfoRow({required this.label, required this.value});
+  final VoidCallback? onTap;
+  const _InfoRow({required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-        const Spacer(),
-        Text(value, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
-      ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        child: Row(
+          children: [
+            Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Spacer(),
+            Text(value, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+            if (onTap != null) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.edit_outlined, size: 14, color: AppColors.primary),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
