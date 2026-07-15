@@ -39,6 +39,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _showServerConfigDialog(BuildContext context) {
+    final controller = TextEditingController(text: ref.read(apiClientProvider).baseUrl);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Configure API Server', style: TextStyle(color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter the backend server URL. E.g. http://10.0.2.2:5000 for Android emulator.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Server Base URL',
+                  prefixIcon: Icon(Icons.dns_outlined),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newUrl = controller.text.trim();
+                if (newUrl.isNotEmpty) {
+                  await ref.read(apiClientProvider).updateBaseUrl(newUrl);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('API Server updated to: $newUrl')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -278,6 +330,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 );
               },
+            ),
+          ),
+
+          // API Server config gear button in top right (rendered on top of Stack children)
+          Positioned(
+            top: 10,
+            right: 10,
+            child: SafeArea(
+              child: IconButton(
+                icon: const Icon(Icons.settings, color: AppColors.textSecondary),
+                tooltip: 'Configure API Server',
+                onPressed: () => _showServerConfigDialog(context),
+              ),
             ),
           ),
         ],

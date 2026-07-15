@@ -22,6 +22,8 @@ class ApiClient {
       ),
     );
 
+    _loadCustomBaseUrl();
+
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -47,6 +49,31 @@ class ApiClient {
       ),
     );
   }
+
+  Future<void> _loadCustomBaseUrl() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final customUrl = prefs.getString('custom_api_base_url');
+      if (customUrl != null && customUrl.isNotEmpty) {
+        _dio.options.baseUrl = customUrl;
+        debugPrint('Loaded custom base URL: $customUrl');
+      } else {
+        _dio.options.baseUrl = AppConstants.baseUrl;
+        debugPrint('Using default base URL: ${AppConstants.baseUrl}');
+      }
+    } catch (e) {
+      debugPrint('Error loading custom base URL: $e');
+    }
+  }
+
+  Future<void> updateBaseUrl(String newUrl) async {
+    _dio.options.baseUrl = newUrl;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_api_base_url', newUrl);
+    debugPrint('Updated and saved new base URL: $newUrl');
+  }
+
+  String get baseUrl => _dio.options.baseUrl;
 
   Dio get dio => _dio;
 
