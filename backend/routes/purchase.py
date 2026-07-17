@@ -112,6 +112,27 @@ def create_purchase():
 
             ))
 
+        # Auto-create supplier bill
+        payment_mode = data.get("payment_mode", "Cash").strip()
+        paid_amt = 0.0
+        bill_status = "pending"
+        if payment_mode.lower() in ["cash", "card", "upi"]:
+            paid_amt = total_amount
+            bill_status = "paid"
+
+        cursor.execute("""
+            INSERT INTO supplier_bills
+            (supplier_id, bill_number, bill_date, due_date, total_amount, paid_amount, status, notes)
+            VALUES (%s, %s, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), %s, %s, %s, %s)
+        """, (
+            data["supplier_id"],
+            invoice_number,
+            total_amount,
+            paid_amt,
+            bill_status,
+            f"Auto-generated from Purchase {invoice_number}. Remarks: {data.get('remarks', '')}".strip()
+        ))
+
         conn.commit()
 
         return {
