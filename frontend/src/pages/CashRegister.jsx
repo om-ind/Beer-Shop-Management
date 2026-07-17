@@ -9,6 +9,7 @@ import {
 import {
     getCashSummary, getCashEntries, addCashEntry, deleteCashEntry
 } from "../services/cashRegisterService";
+import { getPendingBills } from "../services/supplierBillsService";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -73,6 +74,42 @@ export default function CashRegister() {
     });
     const [saving, setSaving] = useState(false);
 
+    const [pendingBills, setPendingBills] = useState([]);
+    const [selectedBillId, setSelectedBillId] = useState("");
+
+    useEffect(() => {
+        if (showForm && form.category === "bill_payment") {
+            loadPendingBills();
+        }
+    }, [showForm, form.category]);
+
+    async function loadPendingBills() {
+        try {
+            const data = await getPendingBills();
+            setPendingBills(data);
+        } catch {
+            toast.error("Failed to load pending bills");
+        }
+    }
+
+    function handleBillSelectChange(e) {
+        const billId = e.target.value;
+        setSelectedBillId(billId);
+        if (!billId) {
+            setForm(f => ({ ...f, amount: "", description: "" }));
+            return;
+        }
+        const bill = pendingBills.find(b => b.id === Number(billId));
+        if (bill) {
+            setForm(f => ({
+                ...f,
+                entry_type: "cash_out",
+                amount: bill.balance_due.toString(),
+                description: `Payment for Bill #${bill.bill_number} (Supplier: ${bill.supplier_name})`
+            }));
+        }
+    }
+
     // Filters
     const [filterType, setFilterType] = useState("");
     const [filterFrom, setFilterFrom] = useState("");
@@ -103,9 +140,14 @@ export default function CashRegister() {
         if (!form.amount || Number(form.amount) <= 0) { toast.warning("Enter a valid amount"); return; }
         try {
             setSaving(true);
-            await addCashEntry({ ...form, amount: Number(form.amount) });
+            await addCashEntry({ 
+                ...form, 
+                amount: Number(form.amount),
+                supplier_bill_id: selectedBillId ? Number(selectedBillId) : null
+            });
             toast.success("Entry added!");
             setForm({ entry_type: "cash_in", category: "daily_sales", amount: "", description: "", entry_date: today() });
+            setSelectedBillId("");
             setShowForm(false);
             load();
         } catch (err) {
@@ -251,7 +293,10 @@ export default function CashRegister() {
                                 <label className="text-xs text-slate-500 font-medium mb-1 block">Category</label>
                                 <select
                                     value={form.category}
-                                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                                    onChange={e => {
+                                        setForm(f => ({ ...f, category: e.target.value }));
+                                        setSelectedBillId("");
+                                    }}
                                     className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
                                 >
                                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -283,6 +328,60 @@ export default function CashRegister() {
                             </div>
                         </div>
 
+                        {form.category === "transfer" && (
+                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3.5 text-xs font-semibold flex items-start gap-2.5">
+                                <span className="text-base">💡</span>
+                                <div>
+                                    {form.entry_type === "cash_out" || form.entry_type === "bank_in" ? (
+                                        <span>
+                                            <strong>Cash to Bank Transfer:</strong> This will simultaneously reduce physical <strong>Cash in Hand</strong> and increase your <strong>Bank / UPI Balance</strong> by ₹{form.amount || "0.00"}.
+                                        </span>
+                                    ) : (
+                                        <span>
+                                            <strong>Bank to Cash Transfer:</strong> This will simultaneously reduce your <strong>Bank / UPI Balance</strong> and increase physical <strong>Cash in Hand</strong> by ₹{form.amount || "0.00"}.
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {form.category === "bill_payment" && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                                    Select Pending Supplier Bill
+                                </label>
+                                {pendingBills.length === 0 ? (
+                                    <p className="text-xs text-slate-400 italic">No pending bills found. You can add one under the Suppliers page.</p>
+                                ) : (
+                                    <select
+                                        value={selectedBillId}
+                                        onChange={handleBillSelectChange}
+                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
+                                    >
+                                        <option value="">-- Select Pending Bill --</option>
+                                        {pendingBills.map(b => (
+                                            <option key={b.id} value={b.id}>
+                                                {b.supplier_name} - Bill #{b.bill_number} (Due: {b.due_date || "—"}) · Pending: ₹{b.balance_due.toFixed(2)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                                {selectedBillId && (() => {
+                                    const selectedBill = pendingBills.find(b => b.id === Number(selectedBillId));
+                                    if (!selectedBill) return null;
+                                    return (
+                                        <div className="text-xs text-slate-500 space-y-1.5 mt-1 bg-white p-3 rounded-xl border border-slate-100">
+                                            <p><strong>Supplier:</strong> {selectedBill.supplier_name} ({selectedBill.supplier_company})</p>
+                                            <p><strong>Total Bill Amount:</strong> ₹{selectedBill.total_amount.toFixed(2)}</p>
+                                            <p><strong>Paid So Far:</strong> ₹{selectedBill.paid_amount.toFixed(2)}</p>
+                                            <p><strong>Remaining Balance:</strong> ₹{selectedBill.balance_due.toFixed(2)}</p>
+                                            <p className="text-emerald-600 font-semibold mt-1">💡 Edit the Amount below to make a partial payment.</p>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+
                         <div>
                             <label className="text-xs text-slate-500 font-medium mb-1 block">Description (optional)</label>
                             <input
@@ -294,6 +393,7 @@ export default function CashRegister() {
                                     form.category === "daily_sales"  ? "e.g. Cash sales July 11" :
                                     form.category === "bill_payment" ? "e.g. Paid Kingfisher bill #123" :
                                     form.category === "expense"      ? "e.g. Electricity bill" :
+                                    form.category === "transfer"     ? "e.g. Transferred weekly cash to account" :
                                     "Additional details..."
                                 }
                                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
@@ -394,7 +494,14 @@ export default function CashRegister() {
                                                 {(entry.category || "other").replace("_", " ")}
                                             </td>
                                             <td className="px-5 py-3.5 text-sm text-slate-600 max-w-xs truncate">
-                                                {entry.description || "—"}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span>{entry.description || "—"}</span>
+                                                    {entry.supplier_bill_id && (
+                                                        <span className="text-[10px] bg-slate-100 text-slate-500 w-fit px-1.5 py-0.5 rounded font-medium">
+                                                            Linked Bill Payment
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 <span className={`font-bold ${isOut ? "text-red-500" : "text-emerald-600"}`}>

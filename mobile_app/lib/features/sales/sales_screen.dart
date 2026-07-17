@@ -227,6 +227,47 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                                               _fmtDate(sale.saleDate),
                                               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                             ),
+                                            const SizedBox(width: 6),
+                                            IconButton(
+                                              icon: const Icon(Icons.edit_calendar, size: 14, color: AppColors.primary),
+                                              constraints: const BoxConstraints(),
+                                              padding: EdgeInsets.zero,
+                                              onPressed: () async {
+                                                final current = DateTime.tryParse(sale.saleDate) ?? DateTime.now();
+                                                final picked = await showDatePicker(
+                                                  context: context,
+                                                  initialDate: current,
+                                                  firstDate: DateTime(2020),
+                                                  lastDate: DateTime.now(),
+                                                  builder: (context, child) {
+                                                    return Theme(
+                                                      data: Theme.of(context).copyWith(
+                                                        colorScheme: const ColorScheme.dark(
+                                                          primary: AppColors.primary,
+                                                          onPrimary: Colors.white,
+                                                          surface: AppColors.surface,
+                                                          onSurface: AppColors.textPrimary,
+                                                        ),
+                                                        dialogBackgroundColor: AppColors.background,
+                                                      ),
+                                                      child: child!,
+                                                    );
+                                                  },
+                                                );
+                                                if (picked != null) {
+                                                  final newDateStr = DateFormat('yyyy-MM-dd').format(picked);
+                                                  final success = await ref.read(salesProvider.notifier).updateSaleDate(sale.id, newDateStr);
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(success ? 'Sale date updated!' : 'Failed to update sale date.'),
+                                                        backgroundColor: success ? AppColors.success : AppColors.error,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              },
+                                            ),
                                             const Spacer(),
                                             _PaymentBadge(method: sale.paymentMethod),
                                             const SizedBox(width: 8),

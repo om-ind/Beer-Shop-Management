@@ -30,6 +30,16 @@ class SalesNotifier extends StateNotifier<SalesState> {
       state = SalesState(error: e.toString());
     }
   }
+
+  Future<bool> updateSaleDate(int saleId, String newDate) async {
+    try {
+      await _api.put('/sales/$saleId', data: {'sale_date': newDate});
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final salesProvider = StateNotifierProvider<SalesNotifier, SalesState>(

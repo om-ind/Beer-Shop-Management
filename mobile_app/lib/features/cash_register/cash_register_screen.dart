@@ -25,6 +25,35 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
   String _searchQuery = '';
   String _paymentMethod = 'Cash';
   int? _selectedCustomerId;
+  DateTime _saleDate = DateTime.now();
+
+  Future<void> _selectSaleDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _saleDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: AppColors.surface,
+              onSurface: AppColors.textPrimary,
+            ),
+            dialogBackgroundColor: AppColors.background,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _saleDate) {
+      setState(() {
+        _saleDate = picked;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -174,55 +203,14 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
                                   itemCount: cartState.items.length,
                                   itemBuilder: (ctx, i) {
                                     final item = cartState.items[i];
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(color: AppColors.divider, width: 0.5),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                              GestureDetector(
-                                                onTap: () => ref.read(cashRegisterProvider.notifier).removeItem(item.productId),
-                                                child: const Icon(Icons.close, size: 16, color: AppColors.error),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Row(
-                                            children: [
-                                              GestureDetector(
-                                                onTap: () => ref.read(cashRegisterProvider.notifier).decrementItem(item.productId),
-                                                child: Container(
-                                                  width: 24, height: 24,
-                                                  decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(6)),
-                                                  child: const Icon(Icons.remove, size: 14, color: AppColors.textPrimary),
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                                child: Text('${item.qty}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.textPrimary)),
-                                              ),
-                                              GestureDetector(
-                                                onTap: () => ref.read(cashRegisterProvider.notifier).incrementItem(item.productId),
-                                                child: Container(
-                                                  width: 24, height: 24,
-                                                  decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(6)),
-                                                  child: const Icon(Icons.add, size: 14, color: Colors.white),
-                                                ),
-                                              ),
-                                              const Spacer(),
-                                              Text(_fmtCurrency(item.unitPrice * item.qty), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
+                                    return _CartItemRow(
+                                      key: ValueKey(item.productId),
+                                      item: item,
+                                      onDelete: () => ref.read(cashRegisterProvider.notifier).removeItem(item.productId),
+                                      onDecrement: () => ref.read(cashRegisterProvider.notifier).decrementItem(item.productId),
+                                      onIncrement: () => ref.read(cashRegisterProvider.notifier).incrementItem(item.productId),
+                                      onQtyChanged: (q) => ref.read(cashRegisterProvider.notifier).updateQty(item.productId, q),
+                                      onPriceChanged: (p) => ref.read(cashRegisterProvider.notifier).updatePrice(item.productId, p),
                                     );
                                   },
                                 ),
@@ -271,6 +259,37 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
                                 ),
                                 const SizedBox(height: 12),
                               ],
+
+                              // Sale Date Selector
+                              const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text('Sale Date', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 12)),
+                              ),
+                              const SizedBox(height: 4),
+                              GestureDetector(
+                                onTap: _selectSaleDate,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface2,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.divider, width: 0.5),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        DateFormat('dd MMM yyyy').format(_saleDate),
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                                      ),
+                                      const Spacer(),
+                                      const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.textSecondary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -330,10 +349,27 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
   }
 
   Future<void> _completeSale(double subtotal, int? customerId) async {
+    final cartItems = ref.read(cashRegisterProvider).items;
+    for (final item in cartItems) {
+      if (item.qty <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Item has invalid quantity.'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+      if (item.unitPrice < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Item has negative price.'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+    }
+
     final completedSale = await ref.read(cashRegisterProvider.notifier).completeSale(
           paymentMethod: _paymentMethod,
           totalAmount: subtotal,
           customerId: customerId,
+          saleDate: DateFormat('yyyy-MM-dd').format(_saleDate),
         );
     if (completedSale != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -388,5 +424,163 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
         ),
       );
     }
+  }
+}
+
+class _CartItemRow extends StatefulWidget {
+  final CartItem item;
+  final VoidCallback onDelete;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+  final Function(int) onQtyChanged;
+  final Function(double) onPriceChanged;
+
+  const _CartItemRow({
+    Key? key,
+    required this.item,
+    required this.onDelete,
+    required this.onDecrement,
+    required this.onIncrement,
+    required this.onQtyChanged,
+    required this.onPriceChanged,
+  }) : super(key: key);
+
+  @override
+  State<_CartItemRow> createState() => _CartItemRowState();
+}
+
+class _CartItemRowState extends State<_CartItemRow> {
+  late TextEditingController _qtyCtrl;
+  late TextEditingController _priceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyCtrl = TextEditingController(text: widget.item.qty.toString());
+    _priceCtrl = TextEditingController(text: widget.item.unitPrice.toStringAsFixed(2));
+  }
+
+  @override
+  void didUpdateWidget(covariant _CartItemRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.item.qty.toString() != _qtyCtrl.text) {
+      _qtyCtrl.text = widget.item.qty.toString();
+    }
+    if (double.tryParse(_priceCtrl.text) != widget.item.unitPrice) {
+      _priceCtrl.text = widget.item.unitPrice.toStringAsFixed(2);
+    }
+  }
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.divider, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.item.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              GestureDetector(
+                onTap: widget.onDelete,
+                child: const Icon(Icons.close, size: 16, color: AppColors.error),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: widget.onDecrement,
+                child: Container(
+                  width: 24, height: 24,
+                  decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.remove, size: 14, color: AppColors.textPrimary),
+                ),
+              ),
+              Container(
+                width: 38,
+                height: 24,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: TextField(
+                  controller: _qtyCtrl,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                  onSubmitted: (val) {
+                    final q = int.tryParse(val) ?? widget.item.qty;
+                    widget.onQtyChanged(q);
+                  },
+                ),
+              ),
+              GestureDetector(
+                onTap: widget.onIncrement,
+                child: Container(
+                  width: 24, height: 24,
+                  decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.add, size: 14, color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text('₹', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+              Container(
+                width: 60,
+                height: 24,
+                margin: const EdgeInsets.only(left: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: TextField(
+                  controller: _priceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(vertical: 6),
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                  onSubmitted: (val) {
+                    final p = double.tryParse(val) ?? widget.item.unitPrice;
+                    widget.onPriceChanged(p);
+                  },
+                ),
+              ),
+              const Spacer(),
+              Text(
+                NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0).format(widget.item.unitPrice * widget.item.qty),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

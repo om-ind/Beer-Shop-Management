@@ -18,12 +18,48 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  DateTime _selectedDate = DateTime.now();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(dashboardProvider.notifier).load();
+      _refresh();
     });
+  }
+
+  Future<void> _refresh() async {
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    await ref.read(dashboardProvider.notifier).load(date: dateStr);
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: AppColors.surface,
+              onSurface: AppColors.textPrimary,
+            ),
+            dialogBackgroundColor: AppColors.background,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+      _refresh();
+    }
   }
 
   String _fmt(double v) => NumberFormat.currency(
@@ -43,7 +79,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: RefreshIndicator(
           color: AppColors.primary,
           backgroundColor: AppColors.surface,
-          onRefresh: () => ref.read(dashboardProvider.notifier).load(),
+          onRefresh: _refresh,
           child: CustomScrollView(
             slivers: [
               // ─── Header ───────────────────────────────────────────────────
@@ -92,7 +128,46 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              // Date Selector Row
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _selectDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.divider, width: 0.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                DateFormat('dd MMM yyyy').format(_selectedDate),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.textSecondary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 15)),
 
               // ─── Content ──────────────────────────────────────────────────
               if (dashState.isLoading)

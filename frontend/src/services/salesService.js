@@ -34,3 +34,8 @@ export async function downloadInvoice(saleId, invoiceNo) {
     link.remove();
     window.URL.revokeObjectURL(url);
 }
+
+export async function updateSale(saleId, data) {
+    const response = await api.put(`/sales/${saleId}`, data);
+    return response.data;
+}

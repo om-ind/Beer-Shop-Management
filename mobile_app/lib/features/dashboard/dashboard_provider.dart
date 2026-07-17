@@ -32,10 +32,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
   DashboardNotifier(this._api) : super(const DashboardState());
 
-  Future<void> load() async {
+  Future<void> load({String? date}) async {
     state = const DashboardState(isLoading: true);
     try {
-      final response = await _api.get('/dashboard');
+      final response = await _api.get(
+        '/dashboard',
+        params: date != null ? {'date': date} : null,
+      );
       final stats = DashboardStats.fromJson(response.data);
       state = DashboardState(stats: stats);
     } catch (e) {

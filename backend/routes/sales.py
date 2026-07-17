@@ -175,23 +175,31 @@ def create_sale():
                     "error": f"Insufficient stock for {product['name']}"
                 }), 400
 
-            total += product["selling_price"] * item["quantity"]
+            try:
+                item_price = float(item.get("selling_price"))
+            except (ValueError, TypeError):
+                item_price = float(product["selling_price"])
+
+            total += item_price * item["quantity"]
 
         # Generate Invoice Number
         invoice_no = "INV" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+        sale_date = data.get("sale_date") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Insert Sale
         cursor.execute(
             """
             INSERT INTO sales
-            (invoice_no, customer_id, total_amount, payment_mode)
-            VALUES(%s,%s,%s,%s)
+            (invoice_no, customer_id, total_amount, payment_mode, sale_date)
+            VALUES(%s,%s,%s,%s,%s)
             """,
             (
                 invoice_no,
                 customer_id,
                 total,
-                payment_mode
+                payment_mode,
+                sale_date
             )
         )
 
@@ -210,7 +218,12 @@ def create_sale():
             )
 
             product = cursor.fetchone()
-            profit = (product["selling_price"] - product["purchase_price"]) * item["quantity"]
+            try:
+                item_price = float(item.get("selling_price"))
+            except (ValueError, TypeError):
+                item_price = float(product["selling_price"])
+
+            profit = (item_price - float(product["purchase_price"])) * item["quantity"]
 
             cursor.execute(
                 """
@@ -222,7 +235,7 @@ def create_sale():
                     sale_id,
                     item["product_id"],
                     item["quantity"],
-                    product["selling_price"],
+                    item_price,
                     profit
                 )
             )
@@ -268,6 +281,52 @@ def create_sale():
             "invoice_no": invoice_no,
             "sale_id": sale_id,
             "total_amount": float(total)
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@sales_bp.route("/sales/<int:sale_id>", methods=["PUT"])
+def update_sale(sale_id):
+    """Update sale attributes (like sale_date)."""
+    data = request.get_json()
+    sale_date = data.get("sale_date")
+
+    if not sale_date:
+        return jsonify({"error": "sale_date is required"}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Check if sale exists
+        cursor.execute("SELECT id FROM sales WHERE id=%s", (sale_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Sale not found"}), 404
+
+        # Update sale_date
+        cursor.execute(
+            """
+            UPDATE sales
+            SET sale_date = %s
+            WHERE id = %s
+            """,
+            (sale_date, sale_id)
+        )
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Sale updated successfully"
         })
 
     except Exception as e:

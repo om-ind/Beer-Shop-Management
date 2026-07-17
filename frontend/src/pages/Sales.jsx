@@ -21,12 +21,14 @@ const PAYMENT_COLORS = {
 };
 
 export default function Sales() {
+    const today = () => new Date().toISOString().slice(0, 10);
     const [activeTab, setActiveTab] = useState("pos");
     const [keyword, setKeyword] = useState("");
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(1);
+    const [saleDate, setSaleDate] = useState(today());
     const [paymentMode, setPaymentMode] = useState("Cash");
     const [invoiceNo, setInvoiceNo] = useState("");
     const [showInvoice, setShowInvoice] = useState(false);
@@ -41,6 +43,9 @@ export default function Sales() {
         try {
             const data = await getCustomers();
             setCustomers(data);
+            if (data && data.length > 0) {
+                setSelectedCustomer(data[0].id);
+            }
         } catch (err) {
             console.error(err);
         }
@@ -85,6 +90,18 @@ export default function Sales() {
         }));
     }
 
+    function updateQty(id, newQty) {
+        setCart(cart.map(item =>
+            item.id === id ? { ...item, quantity: Math.max(0, newQty) } : item
+        ));
+    }
+
+    function updatePrice(id, newPrice) {
+        setCart(cart.map(item =>
+            item.id === id ? { ...item, selling_price: newPrice } : item
+        ));
+    }
+
     function removeItem(id) {
         setCart(cart.filter(item => item.id !== id));
     }
@@ -92,9 +109,20 @@ export default function Sales() {
     async function handleCheckout() {
         if (cart.length === 0) { toast.warning("Cart is empty!"); return; }
 
+        if (cart.some(item => item.quantity <= 0)) {
+            toast.warning("Some items have zero or invalid quantity!");
+            return;
+        }
+
+        if (cart.some(item => Number(item.selling_price) < 0 || isNaN(Number(item.selling_price)))) {
+            toast.warning("Selling price cannot be negative or invalid!");
+            return;
+        }
+
         const sale = {
             customer_id: selectedCustomer,
             payment_mode: paymentMode,
+            sale_date: saleDate,
             items: cart.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
@@ -189,6 +217,8 @@ export default function Sales() {
                                 increaseQty={increaseQty}
                                 decreaseQty={decreaseQty}
                                 removeItem={removeItem}
+                                updateQty={updateQty}
+                                updatePrice={updatePrice}
                             />
                         </div>
                     </div>
@@ -208,6 +238,18 @@ export default function Sales() {
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
+                        </div>
+
+                        {/* Sale Date */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Sale Date</h2>
+                            <input
+                                id="sale-date-input"
+                                type="date"
+                                value={saleDate}
+                                onChange={e => setSaleDate(e.target.value)}
+                                className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 text-slate-700 font-semibold"
+                            />
                         </div>
 
                         {/* Payment Mode */}

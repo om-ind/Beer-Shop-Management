@@ -7,7 +7,7 @@ import '../../core/providers/auth_provider.dart';
 class CartItem {
   final int productId;
   final String name;
-  final double unitPrice;
+  double unitPrice;
   int qty;
 
   CartItem({
@@ -77,6 +77,24 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
     state = state.copyWith(items: items);
   }
 
+  void updateQty(int productId, int qty) {
+    final items = [...state.items];
+    final idx = items.indexWhere((i) => i.productId == productId);
+    if (idx >= 0) {
+      items[idx].qty = qty;
+    }
+    state = state.copyWith(items: items);
+  }
+
+  void updatePrice(int productId, double price) {
+    final items = [...state.items];
+    final idx = items.indexWhere((i) => i.productId == productId);
+    if (idx >= 0) {
+      items[idx].unitPrice = price;
+    }
+    state = state.copyWith(items: items);
+  }
+
   void clear() {
     state = const CashRegisterState();
   }
@@ -85,6 +103,7 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
     required String paymentMethod,
     required double totalAmount,
     int? customerId,
+    String? saleDate,
   }) async {
     state = state.copyWith(isProcessing: true);
     try {
@@ -112,6 +131,7 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
         'total_amount': totalAmount,
         'payment_mode': paymentMethod,
         'customer_id': targetCustomerId,
+        if (saleDate != null) 'sale_date': saleDate,
       });
 
       final resData = res.data as Map<String, dynamic>;
