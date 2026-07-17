@@ -40,15 +40,17 @@ function KPICard({ title, value, icon, gradient, sub }) {
 
 export default function Dashboard() {
 
+    const today = () => new Date().toISOString().slice(0, 10);
     const [dashboard, setDashboard] = useState(null);
+    const [selectedDate, setSelectedDate] = useState(today());
 
     useEffect(() => {
         loadDashboard();
-    }, []);
+    }, [selectedDate]);
 
     async function loadDashboard() {
         try {
-            const data = await getDashboard();
+            const data = await getDashboard(selectedDate);
             setDashboard(data);
         } catch (err) {
             console.error(err);
@@ -75,9 +77,23 @@ export default function Dashboard() {
             <div className="space-y-8 p-2">
 
                 {/* ── Header ── */}
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-                    <p className="text-gray-500 mt-1">Welcome back — here's your shop at a glance</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+                        <p className="text-gray-500 mt-1">Welcome back — here's your shop at a glance</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-100 shadow-sm w-fit">
+                        <label htmlFor="dashboard-date" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            Date:
+                        </label>
+                        <input
+                            id="dashboard-date"
+                            type="date"
+                            value={selectedDate}
+                            onChange={e => setSelectedDate(e.target.value)}
+                            className="text-sm font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                        />
+                    </div>
                 </div>
 
                 {/* ── Sales KPIs ── */}

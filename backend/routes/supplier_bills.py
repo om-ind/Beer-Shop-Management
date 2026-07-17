@@ -266,3 +266,39 @@ def delete_supplier_bill(bill_id):
     finally:
         cursor.close()
         conn.close()
+
+
+@supplier_bills_bp.route("/supplier-bills/pending", methods=["GET"])
+def get_pending_bills():
+    """Get all pending and partial bills across all suppliers."""
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT
+                sb.id,
+                sb.bill_number,
+                sb.bill_date,
+                sb.due_date,
+                sb.total_amount,
+                sb.paid_amount,
+                (sb.total_amount - sb.paid_amount) AS balance_due,
+                sb.status,
+                s.name AS supplier_name,
+                s.company AS supplier_company
+            FROM supplier_bills sb
+            JOIN suppliers s ON s.id = sb.supplier_id
+            WHERE sb.status != 'paid'
+            ORDER BY sb.due_date ASC, sb.bill_date DESC
+        """)
+        bills = cursor.fetchall()
+        for b in bills:
+            b["total_amount"] = float(b["total_amount"])
+            b["paid_amount"] = float(b["paid_amount"])
+            b["balance_due"] = float(b["balance_due"])
+            b["bill_date"] = str(b["bill_date"])
+            b["due_date"] = str(b["due_date"]) if b.get("due_date") else None
+        return jsonify(bills)
+    finally:
+        cursor.close()
+        conn.close()

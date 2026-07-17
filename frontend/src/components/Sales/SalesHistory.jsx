@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { FaHistory, FaEye, FaFilePdf, FaChevronLeft, FaChevronRight, FaTimes, FaReceipt, FaDownload } from "react-icons/fa";
-import { getSales, getSaleDetail, downloadInvoice } from "../../services/salesService";
+import { FaHistory, FaEye, FaFilePdf, FaChevronLeft, FaChevronRight, FaTimes, FaReceipt, FaDownload, FaCalendarAlt } from "react-icons/fa";
+import { getSales, getSaleDetail, downloadInvoice, updateSale } from "../../services/salesService";
 
 function SaleDetailModal({ saleId, onClose }) {
     const [sale, setSale] = useState(null);
@@ -131,6 +131,20 @@ export default function SalesHistory() {
     const [loading, setLoading] = useState(true);
     const [viewingSale, setViewingSale] = useState(null);
     const [downloadingId, setDownloadingId] = useState(null);
+    const [editingSaleId, setEditingSaleId] = useState(null);
+    const [editingDate, setEditingDate] = useState("");
+
+    async function handleSaveDate(saleId) {
+        if (!editingDate) return;
+        try {
+            await updateSale(saleId, { sale_date: editingDate });
+            toast.success("Sale date updated!");
+            setEditingSaleId(null);
+            loadSales();
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Failed to update date");
+        }
+    }
 
     useEffect(() => {
         loadSales();
@@ -225,7 +239,44 @@ export default function SalesHistory() {
                                             </span>
                                         </td>
                                         <td className="px-5 py-3.5 text-sm text-slate-500">
-                                            {sale.sale_date ? new Date(sale.sale_date).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                                            {editingSaleId === sale.id ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <input
+                                                        type="date"
+                                                        value={editingDate}
+                                                        onChange={e => setEditingDate(e.target.value)}
+                                                        className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleSaveDate(sale.id)}
+                                                        className="bg-emerald-500 hover:bg-emerald-600 text-white rounded px-2 py-1 text-xs font-semibold transition"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingSaleId(null)}
+                                                        className="bg-slate-100 hover:bg-slate-200 text-slate-500 rounded px-2 py-1 text-xs transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 group/date">
+                                                    <span>
+                                                        {sale.sale_date ? new Date(sale.sale_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingSaleId(sale.id);
+                                                            setEditingDate(sale.sale_date ? sale.sale_date.slice(0, 10) : "");
+                                                        }}
+                                                        className="text-slate-400 hover:text-indigo-600 opacity-0 group-hover/date:opacity-100 transition-opacity"
+                                                        title="Edit Date"
+                                                    >
+                                                        <FaCalendarAlt className="text-xs" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-5 py-3.5 text-center">
                                             <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

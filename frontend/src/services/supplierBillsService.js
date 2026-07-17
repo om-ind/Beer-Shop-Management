@@ -24,3 +24,8 @@ export async function deleteSupplierBill(billId) {
     const res = await api.delete(`/supplier-bills/${billId}`);
     return res.data;
 }
+
+export async function getPendingBills() {
+    const res = await api.get("/supplier-bills/pending");
+    return res.data;
+}

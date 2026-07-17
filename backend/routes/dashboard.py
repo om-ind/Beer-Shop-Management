@@ -1,5 +1,6 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from database import get_connection
+import datetime
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -11,39 +12,49 @@ def dashboard():
     cursor = conn.cursor(dictionary=True)
 
     try:
+        selected_date_str = request.args.get("date")
+        if not selected_date_str:
+            selected_date = datetime.date.today()
+        else:
+            try:
+                selected_date = datetime.datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                selected_date = datetime.date.today()
 
         dashboard = {}
 
-        # Today's Sales
+        # Selected Date's Sales
         cursor.execute("""
         SELECT IFNULL(SUM(total_amount),0) AS value
         FROM sales
-        WHERE DATE(sale_date)=CURDATE()
-        """)
+        WHERE DATE(sale_date)=%s
+        """, (selected_date,))
         dashboard["today_sales"] = cursor.fetchone()["value"]
 
-        # Today's Profit
+        # Selected Date's Profit
         cursor.execute("""
-        SELECT IFNULL(SUM(profit),0) AS value
-        FROM sale_items
-        """)
+        SELECT IFNULL(SUM(si.profit),0) AS value
+        FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        WHERE DATE(s.sale_date)=%s
+        """, (selected_date,))
         dashboard["today_profit"] = cursor.fetchone()["value"]
 
-        # Weekly Sales
+        # Weekly Sales (relative to selected date)
         cursor.execute("""
         SELECT IFNULL(SUM(total_amount),0) AS value
         FROM sales
-        WHERE YEARWEEK(sale_date,1)=YEARWEEK(CURDATE(),1)
-        """)
+        WHERE YEARWEEK(sale_date,1)=YEARWEEK(%s,1)
+        """, (selected_date,))
         dashboard["weekly_sales"] = cursor.fetchone()["value"]
 
-        # Monthly Sales
+        # Monthly Sales (relative to selected date)
         cursor.execute("""
         SELECT IFNULL(SUM(total_amount),0) AS value
         FROM sales
-        WHERE MONTH(sale_date)=MONTH(CURDATE())
-        AND YEAR(sale_date)=YEAR(CURDATE())
-        """)
+        WHERE MONTH(sale_date)=MONTH(%s)
+        AND YEAR(sale_date)=YEAR(%s)
+        """, (selected_date, selected_date))
         dashboard["monthly_sales"] = cursor.fetchone()["value"]
 
         # Inventory Value
@@ -116,25 +127,25 @@ def dashboard():
 
         dashboard["highest_profit_brand"] = brand["brand"] if brand else "N/A"
 
-        # Monthly Profit (all time sum of profits for this month)
+        # Monthly Profit (relative to selected date)
         cursor.execute("""
         SELECT IFNULL(SUM(si.profit),0) AS value
         FROM sale_items si
         JOIN sales s ON s.id = si.sale_id
-        WHERE MONTH(s.sale_date)=MONTH(CURDATE())
-        AND YEAR(s.sale_date)=YEAR(CURDATE())
-        """)
+        WHERE MONTH(s.sale_date)=MONTH(%s)
+        AND YEAR(s.sale_date)=YEAR(%s)
+        """, (selected_date, selected_date))
         monthly_profit = float(cursor.fetchone()["value"])
         dashboard["monthly_profit"] = monthly_profit
 
-        # Monthly Expenses (safe even if table doesn't exist yet)
+        # Monthly Expenses (relative to selected date)
         try:
             cursor.execute("""
             SELECT IFNULL(SUM(amount),0) AS value
             FROM expenses
-            WHERE MONTH(expense_date)=MONTH(CURDATE())
-            AND YEAR(expense_date)=YEAR(CURDATE())
-            """)
+            WHERE MONTH(expense_date)=MONTH(%s)
+            AND YEAR(expense_date)=YEAR(%s)
+            """, (selected_date, selected_date))
             monthly_expenses = float(cursor.fetchone()["value"])
         except Exception:
             monthly_expenses = 0.0
