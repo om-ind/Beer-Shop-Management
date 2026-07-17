@@ -60,14 +60,6 @@ export default function CustomerModal({
 
         }
 
-        if (!form.mobile) {
-
-            alert("Enter mobile number");
-
-            return;
-
-        }
-
         onSave(form);
 
     }

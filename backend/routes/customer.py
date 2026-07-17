@@ -27,6 +27,7 @@ def get_customers():
 
     for c in customers:
         c["credit_balance"] = float(c.get("credit_balance") or 0)
+        c["phone"] = c.get("mobile") or ""
 
     return jsonify(customers)
 
@@ -42,6 +43,8 @@ def add_customer():
     conn = get_connection()
     cursor = conn.cursor()
 
+    mobile_num = data.get("mobile") or data.get("phone") or ""
+
     cursor.execute("""
         INSERT INTO customers
         (
@@ -54,7 +57,7 @@ def add_customer():
     """, (
 
         data["name"],
-        data.get("mobile", ""),
+        mobile_num,
         data.get("address", "")
 
     ))
@@ -81,6 +84,8 @@ def update_customer(id):
     conn = get_connection()
     cursor = conn.cursor()
 
+    mobile_num = data.get("mobile") or data.get("phone") or ""
+
     cursor.execute("""
         UPDATE customers
         SET
@@ -91,7 +96,7 @@ def update_customer(id):
     """, (
 
         data["name"],
-        data.get("mobile", ""),
+        mobile_num,
         data.get("address", ""),
         id
 
