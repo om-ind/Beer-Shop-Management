@@ -1,6 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from database import get_connection
 from datetime import date
+from utils.auth_middleware import token_required
 
 cash_register_bp = Blueprint("cash_register", __name__)
 
@@ -8,36 +9,48 @@ VALID_TYPES = ("cash_in", "cash_out", "bank_in", "bank_out")
 VALID_CATEGORIES = ("daily_sales", "bill_payment", "expense", "transfer", "salary", "other")
 
 
+def _get_shop_id():
+    role = g.user.get("role")
+    shop_id = g.user.get("shop_id")
+    if role == "Admin":
+        return request.args.get("shop_id", type=int) or shop_id
+    return shop_id
+
+
 # ─────────────────────────────────
 # GET  /cash-register/summary
 # Returns cash balance, bank balance, grand total
 # ─────────────────────────────────
 @cash_register_bp.route("/cash-register/summary", methods=["GET"])
+@token_required
 def get_summary():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
+    shop_id = _get_shop_id()
+    sf = f"WHERE shop_id = {shop_id}" if shop_id else ""
+    sf_today = f"AND shop_id = {shop_id}" if shop_id else ""
+
     try:
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT
                 IFNULL(SUM(CASE WHEN entry_type = 'cash_in'  THEN amount ELSE 0 END), 0) AS cash_in,
                 IFNULL(SUM(CASE WHEN entry_type = 'cash_out' THEN amount ELSE 0 END), 0) AS cash_out,
                 IFNULL(SUM(CASE WHEN entry_type = 'bank_in'  THEN amount ELSE 0 END), 0) AS bank_in,
                 IFNULL(SUM(CASE WHEN entry_type = 'bank_out' THEN amount ELSE 0 END), 0) AS bank_out
-            FROM cash_register
+            FROM cash_register {sf}
         """)
         row = cursor.fetchone()
 
         cash_balance = float(row["cash_in"]) - float(row["cash_out"])
         bank_balance = float(row["bank_in"]) - float(row["bank_out"])
 
-        # Today's in
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT
                 IFNULL(SUM(CASE WHEN entry_type IN ('cash_in','bank_in')  THEN amount ELSE 0 END), 0) AS today_in,
                 IFNULL(SUM(CASE WHEN entry_type IN ('cash_out','bank_out') THEN amount ELSE 0 END), 0) AS today_out
             FROM cash_register
-            WHERE entry_date = CURDATE()
+            WHERE entry_date = CURDATE() {sf_today}
         """)
         today = cursor.fetchone()
 
@@ -59,6 +72,7 @@ def get_summary():
 # Paginated ledger with optional filters
 # ─────────────────────────────────
 @cash_register_bp.route("/cash-register", methods=["GET"])
+@token_required
 def get_entries():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -73,6 +87,12 @@ def get_entries():
 
         filters = []
         params = []
+
+        # shop_id isolation
+        shop_id = _get_shop_id()
+        if shop_id:
+            filters.append("shop_id = %s")
+            params.append(shop_id)
 
         if entry_type and entry_type in VALID_TYPES:
             filters.append("entry_type = %s")
@@ -126,8 +146,10 @@ def get_entries():
 # Add a new ledger entry
 # ─────────────────────────────────
 @cash_register_bp.route("/cash-register", methods=["POST"])
+@token_required
 def add_entry():
     data = request.get_json()
+    shop_id = _get_shop_id()
     entry_type = data.get("entry_type", "").strip()
     category = data.get("category", "other").strip()
     amount = float(data.get("amount", 0))
@@ -205,19 +227,19 @@ def add_entry():
             cursor.execute("""
                 INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (entry_type, category, amount, desc_with_ref, entry_date, supplier_bill_id))
+            """, (entry_type, category, amount, desc_with_ref, entry_date, supplier_bill_id, shop_id))
             main_id = cursor.lastrowid
 
             # Insert counterpart entry
             cursor.execute("""
-                INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (counterpart_type, category, amount, desc_with_ref, entry_date, supplier_bill_id))
+                INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id, shop_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (counterpart_type, category, amount, desc_with_ref, entry_date, supplier_bill_id, shop_id))
         else:
             cursor.execute("""
-                INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (entry_type, category, amount, description, entry_date, supplier_bill_id))
+                INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id, shop_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (entry_type, category, amount, description, entry_date, supplier_bill_id, shop_id))
             main_id = cursor.lastrowid
 
         conn.commit()
@@ -237,6 +259,7 @@ def add_entry():
 # DELETE /cash-register/<id>
 # ─────────────────────────────────
 @cash_register_bp.route("/cash-register/<int:entry_id>", methods=["DELETE"])
+@token_required
 def delete_entry(entry_id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)

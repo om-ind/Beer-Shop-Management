@@ -1,33 +1,45 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 from database import get_connection
+from utils.auth_middleware import token_required
 
 supplier_bp = Blueprint("supplier", __name__)
+
+
+def _shop_id():
+    return g.user.get("shop_id")
+
+def _is_admin():
+    return g.user.get("role") == "Admin"
 
 
 # ===============================
 # GET /suppliers — list all
 # ===============================
 @supplier_bp.route("/suppliers", methods=["GET"])
+@token_required
 def get_suppliers():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
+    shop_id = _shop_id()
 
-    cursor.execute("""
-        SELECT
-            id,
-            name,
-            company,
-            mobile,
-            address
-        FROM suppliers
-        ORDER BY name
-    """)
+    if _is_admin():
+        filter_shop = request.args.get("shop_id", type=int) or shop_id
+    else:
+        filter_shop = shop_id
+
+    if filter_shop:
+        cursor.execute("""
+            SELECT id, name, company, mobile, address
+            FROM suppliers
+            WHERE shop_id=%s
+            ORDER BY name
+        """, (filter_shop,))
+    else:
+        cursor.execute("SELECT id, name, company, mobile, address FROM suppliers ORDER BY name")
 
     suppliers = cursor.fetchall()
-
     cursor.close()
     conn.close()
-
     return jsonify(suppliers)
 
 
@@ -35,8 +47,13 @@ def get_suppliers():
 # POST /suppliers — add new supplier
 # ===============================
 @supplier_bp.route("/suppliers", methods=["POST"])
+@token_required
 def add_supplier():
     data = request.get_json()
+    shop_id = _shop_id()
+
+    if _is_admin():
+        shop_id = data.get("shop_id") or shop_id
 
     name    = data.get("name", "").strip()
     company = data.get("company", "").strip()
@@ -51,11 +68,10 @@ def add_supplier():
 
     try:
         cursor.execute("""
-            INSERT INTO suppliers (name, company, mobile, address)
-            VALUES (%s, %s, %s, %s)
-        """, (name, company, mobile, address))
+            INSERT INTO suppliers (name, company, mobile, address, shop_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (name, company, mobile, address, shop_id))
         conn.commit()
-
         return jsonify({"message": "Supplier added", "id": cursor.lastrowid}), 201
 
     finally:
@@ -67,6 +83,7 @@ def add_supplier():
 # PUT /suppliers/<id> — update supplier
 # ===============================
 @supplier_bp.route("/suppliers/<int:supplier_id>", methods=["PUT"])
+@token_required
 def update_supplier(supplier_id):
     data = request.get_json()
 
@@ -100,9 +117,10 @@ def update_supplier(supplier_id):
 
 
 # ===============================
-# GET /suppliers/<id>/check — get linked data counts before delete
+# GET /suppliers/<id>/check
 # ===============================
 @supplier_bp.route("/suppliers/<int:supplier_id>/check", methods=["GET"])
+@token_required
 def check_supplier_links(supplier_id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -124,11 +142,10 @@ def check_supplier_links(supplier_id):
 
 
 # ===============================
-# DELETE /suppliers/<id>?force=true — delete supplier
-# Without force=true, blocked if linked data exists
-# With force=true, cascades: bills → purchase_items → purchases → supplier
+# DELETE /suppliers/<id>?force=true
 # ===============================
 @supplier_bp.route("/suppliers/<int:supplier_id>", methods=["DELETE"])
+@token_required
 def delete_supplier(supplier_id):
     force = request.args.get("force", "false").lower() == "true"
 
@@ -137,19 +154,13 @@ def delete_supplier(supplier_id):
 
     try:
         if force:
-            # Cascade delete in correct FK order
-            # 1. Delete supplier bills
             cursor.execute("DELETE FROM supplier_bills WHERE supplier_id = %s", (supplier_id,))
-            # 2. Get purchase IDs for this supplier
             cursor.execute("SELECT id FROM purchases WHERE supplier_id = %s", (supplier_id,))
             purchase_ids = [row[0] for row in cursor.fetchall()]
-            # 3. Delete purchase_items for those purchases
             if purchase_ids:
                 placeholders = ",".join(["%s"] * len(purchase_ids))
                 cursor.execute(f"DELETE FROM purchase_items WHERE purchase_id IN ({placeholders})", purchase_ids)
-            # 4. Delete purchases
             cursor.execute("DELETE FROM purchases WHERE supplier_id = %s", (supplier_id,))
-            # 5. Finally delete supplier
             cursor.execute("DELETE FROM suppliers WHERE id = %s", (supplier_id,))
             conn.commit()
 
@@ -159,7 +170,6 @@ def delete_supplier(supplier_id):
             return jsonify({"message": "Supplier and all linked data deleted"})
 
         else:
-            # Safe delete — check for links first
             cursor.execute("SELECT COUNT(*) FROM purchases WHERE supplier_id = %s", (supplier_id,))
             if cursor.fetchone()[0] > 0:
                 return jsonify({"message": "Cannot delete: supplier has linked purchases", "has_links": True}), 400

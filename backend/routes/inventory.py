@@ -1,15 +1,30 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from database import get_connection
+from utils.auth_middleware import token_required
 
 inventory_bp = Blueprint("inventory", __name__)
 
 
+def get_shop_id():
+    """Return caller's shop_id. Admin can pass ?shop_id= to scope a specific shop."""
+    role = g.user.get("role")
+    if role == "Admin":
+        sid = request.args.get("shop_id", type=int)
+        return sid  # None = all shops (admin global view)
+    return g.user.get("shop_id")
+
+
 # GET all products
 @inventory_bp.route("/products", methods=["GET"])
+@token_required
 def get_products():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM products ORDER BY name")
+    shop_id = get_shop_id()
+    if shop_id:
+        cursor.execute("SELECT * FROM products WHERE shop_id=%s ORDER BY name", (shop_id,))
+    else:
+        cursor.execute("SELECT * FROM products ORDER BY name")
     products = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -18,15 +33,24 @@ def get_products():
 
 # ADD product
 @inventory_bp.route("/products", methods=["POST"])
+@token_required
 def add_product():
     data = request.json
+    shop_id = g.user.get("shop_id")
+
+    # Admin must supply shop_id
+    if g.user.get("role") == "Admin":
+        shop_id = data.get("shop_id") or shop_id
+        if not shop_id:
+            return jsonify({"error": "shop_id is required"}), 400
+
     conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("""
         INSERT INTO products
-        (barcode, name, brand, category, purchase_price, selling_price, stock, minimum_stock, expiry_date)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (barcode, name, brand, category, purchase_price, selling_price, stock, minimum_stock, expiry_date, shop_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             data.get("barcode"),
             data.get("name"),
@@ -37,6 +61,7 @@ def add_product():
             data.get("stock"),
             data.get("minimum_stock"),
             data.get("expiry_date") or None,
+            shop_id,
         ))
         conn.commit()
         return jsonify({"message": "Product Added Successfully"}), 201
@@ -53,35 +78,35 @@ def add_product():
         conn.close()
 
 
-# UPDATE product — exclude barcode from unique check by using id != self
+# UPDATE product
 @inventory_bp.route("/products/<int:id>", methods=["PUT"])
+@token_required
 def update_product(id):
     data = request.json
+    shop_id = g.user.get("shop_id")
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Check barcode uniqueness manually (ignore current product's own barcode)
+        # Ownership check
+        if g.user.get("role") != "Admin":
+            cursor.execute("SELECT shop_id FROM products WHERE id=%s", (id,))
+            row = cursor.fetchone()
+            if not row or row[0] != shop_id:
+                return jsonify({"error": "Forbidden"}), 403
+
         barcode = data.get("barcode", "").strip()
         if barcode:
             cursor.execute(
-                "SELECT id FROM products WHERE barcode = %s AND id != %s",
-                (barcode, id)
+                "SELECT id FROM products WHERE barcode = %s AND id != %s AND shop_id = %s",
+                (barcode, id, shop_id)
             )
             if cursor.fetchone():
                 return jsonify({"error": "Another product already uses this barcode"}), 409
 
         cursor.execute("""
         UPDATE products
-        SET
-            barcode=%s,
-            name=%s,
-            brand=%s,
-            category=%s,
-            purchase_price=%s,
-            selling_price=%s,
-            stock=%s,
-            minimum_stock=%s,
-            expiry_date=%s
+        SET barcode=%s, name=%s, brand=%s, category=%s, purchase_price=%s,
+            selling_price=%s, stock=%s, minimum_stock=%s, expiry_date=%s
         WHERE id=%s
         """, (
             barcode or None,
@@ -109,6 +134,7 @@ def update_product(id):
 
 # CHECK product links before delete
 @inventory_bp.route("/products/<int:id>/check", methods=["GET"])
+@token_required
 def check_product_links(id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -130,16 +156,21 @@ def check_product_links(id):
 
 
 # DELETE product
-# ?force=true: nullifies FK references then deletes
 @inventory_bp.route("/products/<int:id>", methods=["DELETE"])
+@token_required
 def delete_product(id):
     force = request.args.get("force", "false").lower() == "true"
+    shop_id = g.user.get("shop_id")
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        if g.user.get("role") != "Admin":
+            cursor.execute("SELECT shop_id FROM products WHERE id=%s", (id,))
+            row = cursor.fetchone()
+            if not row or row[0] != shop_id:
+                return jsonify({"error": "Forbidden"}), 403
+
         if force:
-            # Nullify references in sale_items and purchase_items
-            # (set product_id to NULL so history is kept but FK is released)
             cursor.execute("UPDATE sale_items SET product_id = NULL WHERE product_id = %s", (id,))
             cursor.execute("UPDATE purchase_items SET product_id = NULL WHERE product_id = %s", (id,))
             cursor.execute("DELETE FROM products WHERE id = %s", (id,))
@@ -147,7 +178,6 @@ def delete_product(id):
             return jsonify({"message": "Product deleted"})
 
         else:
-            # Safe check first
             cursor.execute("SELECT COUNT(*) FROM sale_items WHERE product_id = %s", (id,))
             if cursor.fetchone()[0] > 0:
                 return jsonify({"message": "Product has sales records", "has_links": True}), 400

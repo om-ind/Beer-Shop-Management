@@ -15,6 +15,7 @@ from routes.invoice import invoice_bp
 from routes.cash_register import cash_register_bp
 from routes.supplier_bills import supplier_bills_bp
 from routes.expenses import expenses_bp
+from routes.shops import shops_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -35,6 +36,7 @@ app.register_blueprint(invoice_bp)
 app.register_blueprint(cash_register_bp)
 app.register_blueprint(supplier_bills_bp)
 app.register_blueprint(expenses_bp)
+app.register_blueprint(shops_bp)
 
 
 @app.route("/")

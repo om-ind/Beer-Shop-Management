@@ -26,7 +26,8 @@ def login():
 
     cursor.execute(
         """
-        SELECT * FROM users
+        SELECT id, username, password, role, full_name, shop_id, is_active
+        FROM users
         WHERE username=%s
         """,
         (username,)
@@ -42,6 +43,12 @@ def login():
             "success": False,
             "message": "Invalid Username"
         }), 401
+
+    if user.get("is_active") == 0:
+        return jsonify({
+            "success": False,
+            "message": "Account is deactivated. Please contact Admin."
+        }), 403
 
     if not bcrypt.checkpw(
         password.encode(),
@@ -61,7 +68,8 @@ def login():
             "id": user["id"],
             "username": user["username"],
             "role": user["role"],
-            "full_name": user["full_name"]
+            "full_name": user.get("full_name", ""),
+            "shop_id": user.get("shop_id")     # None for Admin
         }
     })
 
