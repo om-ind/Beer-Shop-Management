@@ -56,7 +56,12 @@ export default function Login() {
 
             console.log("3. Login successful", result);
 
-            navigate("/dashboard");
+            // Role-based redirect
+            if (result.user?.role === "Admin") {
+                navigate("/admin/dashboard");
+            } else {
+                navigate("/dashboard");
+            }
 
         }
 

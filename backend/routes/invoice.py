@@ -94,17 +94,17 @@ def download_invoice(sale_id):
     SLATE = colors.HexColor("#64748B")
     LIGHT_BG = colors.HexColor("#F8FAFC")
 
-    title_style = ParagraphStyle("title", fontSize=24, textColor=DARK, fontName="Helvetica-Bold", alignment=TA_CENTER)
-    subtitle_style = ParagraphStyle("subtitle", fontSize=10, textColor=SLATE, alignment=TA_CENTER)
-    label_style = ParagraphStyle("label", fontSize=9, textColor=SLATE, fontName="Helvetica")
-    value_style = ParagraphStyle("value", fontSize=10, textColor=DARK, fontName="Helvetica-Bold")
-    right_style = ParagraphStyle("right", fontSize=10, textColor=DARK, alignment=TA_RIGHT)
+    title_style = ParagraphStyle("title", fontSize=24, leading=28, textColor=DARK, fontName="Helvetica-Bold", alignment=TA_CENTER)
+    subtitle_style = ParagraphStyle("subtitle", fontSize=10, leading=12, textColor=SLATE, alignment=TA_CENTER)
+    label_style = ParagraphStyle("label", fontSize=9, leading=11, textColor=SLATE, fontName="Helvetica")
+    value_style = ParagraphStyle("value", fontSize=10, leading=12, textColor=DARK, fontName="Helvetica-Bold")
+    right_style = ParagraphStyle("right", fontSize=10, leading=12, textColor=DARK, alignment=TA_RIGHT)
 
     elements = []
 
     # Header
     elements.append(Paragraph("🍺 Beer Shop ERP", title_style))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 10))
     elements.append(Paragraph("Tax Invoice", subtitle_style))
     elements.append(HRFlowable(width="100%", thickness=2, color=AMBER, spaceAfter=12))
 
@@ -178,16 +178,16 @@ def download_invoice(sale_id):
     # Total
     total = sale.get("total_amount", 0)
     total_data = [
-        ["", "", "", "", "GRAND TOTAL:", f"Rs. {total:.2f}"]
+        ["", "GRAND TOTAL:", f"Rs. {total:.2f}"]
     ]
-    total_table = Table(total_data, colWidths=["5%", "30%", "20%", "10%", "17.5%", "17.5%"])
+    total_table = Table(total_data, colWidths=["55%", "27.5%", "17.5%"])
     total_table.setStyle(TableStyle([
-        ("BACKGROUND", (4, 0), (5, 0), AMBER),
-        ("TEXTCOLOR", (4, 0), (5, 0), colors.white),
-        ("FONTNAME", (4, 0), (5, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (4, 0), (5, 0), 11),
-        ("ALIGN", (4, 0), (5, 0), "RIGHT"),
-        ("PADDING", (4, 0), (5, 0), 8),
+        ("BACKGROUND", (1, 0), (2, 0), AMBER),
+        ("TEXTCOLOR", (1, 0), (2, 0), colors.white),
+        ("FONTNAME", (1, 0), (2, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (1, 0), (2, 0), 11),
+        ("ALIGN", (1, 0), (2, 0), "RIGHT"),
+        ("PADDING", (1, 0), (2, 0), 8),
     ]))
     elements.append(total_table)
     elements.append(Spacer(1, 24))

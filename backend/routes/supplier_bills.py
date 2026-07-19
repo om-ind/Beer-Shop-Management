@@ -1,8 +1,17 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from database import get_connection
 from datetime import date as date_obj
+from utils.auth_middleware import token_required
 
 supplier_bills_bp = Blueprint("supplier_bills", __name__)
+
+
+def _get_shop_id():
+    role = g.user.get("role")
+    shop_id = g.user.get("shop_id")
+    if role == "Admin":
+        return request.args.get("shop_id", type=int) or shop_id
+    return shop_id
 
 
 def _serialize_bill(bill):
@@ -27,6 +36,7 @@ def _serialize_bill(bill):
 # All bills for a specific supplier
 # ─────────────────────────────────
 @supplier_bills_bp.route("/suppliers/<int:supplier_id>/bills", methods=["GET"])
+@token_required
 def get_supplier_bills(supplier_id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)

@@ -9,6 +9,8 @@ def generate_token(user):
         "id": user["id"],
         "username": user["username"],
         "role": user["role"],
+        "shop_id": user.get("shop_id"),          # None for Admin
+        "full_name": user.get("full_name", ""),
         "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
     }
 
