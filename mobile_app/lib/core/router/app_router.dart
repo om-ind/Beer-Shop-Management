@@ -16,6 +16,8 @@ import '../../features/reports/reports_screen.dart';
 import '../../features/analytics/analytics_screen.dart';
 import '../../features/expenses/expenses_screen.dart';
 import '../../features/users/users_screen.dart';
+import '../../features/shops/shops_screen.dart';
+import '../../features/admin/admin_dashboard_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../shared/layouts/app_shell.dart';
 
@@ -23,13 +25,15 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: '/dashboard',
+    initialLocation: authState.user?.isAdmin == true ? '/admin/dashboard' : '/dashboard',
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
       final isLoginRoute = state.matchedLocation == '/login';
 
       if (!isAuthenticated && !isLoginRoute) return '/login';
-      if (isAuthenticated && isLoginRoute) return '/dashboard';
+      if (isAuthenticated && isLoginRoute) {
+        return authState.user?.isAdmin == true ? '/admin/dashboard' : '/dashboard';
+      }
       return null;
     },
     routes: [
@@ -41,8 +45,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(
+            path: '/admin/dashboard',
+            builder: (_, __) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/admin/shops',
+            builder: (_, __) => const ShopsScreen(),
+          ),
+          GoRoute(
             path: '/dashboard',
             builder: (_, __) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/shops',
+            builder: (_, __) => const ShopsScreen(),
           ),
           GoRoute(
             path: '/sales',
