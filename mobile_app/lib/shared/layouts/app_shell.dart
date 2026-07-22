@@ -16,6 +16,14 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
 
+  static const List<_NavItem> _adminItems = [
+    _NavItem(icon: Icons.admin_panel_settings_outlined, activeIcon: Icons.admin_panel_settings, label: 'Admin', path: '/admin/dashboard'),
+    _NavItem(icon: Icons.storefront_outlined, activeIcon: Icons.storefront, label: 'Shops', path: '/admin/shops'),
+    _NavItem(icon: Icons.manage_accounts_outlined, activeIcon: Icons.manage_accounts, label: 'Users', path: '/users'),
+    _NavItem(icon: Icons.settings_outlined, activeIcon: Icons.settings, label: 'Settings', path: '/settings'),
+    _NavItem(icon: Icons.menu, activeIcon: Icons.menu, label: 'More', path: ''),
+  ];
+
   static const List<_NavItem> _ownerManagerItems = [
     _NavItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
     _NavItem(icon: Icons.point_of_sale_outlined, activeIcon: Icons.point_of_sale, label: 'Sales', path: '/sales'),
@@ -34,7 +42,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   List<_NavItem> get _navItems {
     final user = ref.read(currentUserProvider);
-    return user?.isCashier == true ? _cashierItems : _ownerManagerItems;
+    if (user?.isAdmin == true) return _adminItems;
+    if (user?.isCashier == true) return _cashierItems;
+    return _ownerManagerItems;
   }
 
   void _onNavTap(int index) {
@@ -208,6 +218,10 @@ class _MoreDrawer extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               children: [
+                if (user?.isAdmin == true)
+                  _DrawerTile(icon: Icons.admin_panel_settings_outlined, label: 'Admin Dashboard', onTap: () => onNavigate('/admin/dashboard')),
+                if (user?.isAdmin == true)
+                  _DrawerTile(icon: Icons.storefront_outlined, label: 'All Shops', onTap: () => onNavigate('/admin/shops')),
                 if (isOwnerOrManager) ...[
                   _DrawerTile(icon: Icons.calculate_outlined, label: 'Cash Register', onTap: () => onNavigate('/cash-register')),
                   _DrawerTile(icon: Icons.shopping_cart_outlined, label: 'Purchases', onTap: () => onNavigate('/purchases')),
@@ -217,7 +231,7 @@ class _MoreDrawer extends StatelessWidget {
                   _DrawerTile(icon: Icons.receipt_long_outlined, label: 'Expenses', onTap: () => onNavigate('/expenses')),
                   _DrawerTile(icon: Icons.warning_amber_outlined, label: 'Low Stock', onTap: () => onNavigate('/low-stock')),
                 ],
-                if (user?.isOwner == true)
+                if (user?.isAdmin == true || user?.isOwner == true)
                   _DrawerTile(icon: Icons.manage_accounts_outlined, label: 'Users', onTap: () => onNavigate('/users')),
                 _DrawerTile(icon: Icons.settings_outlined, label: 'Settings', onTap: () => onNavigate('/settings')),
                 _DrawerTile(icon: Icons.logout, label: 'Logout', onTap: onLogout, isDestructive: true),

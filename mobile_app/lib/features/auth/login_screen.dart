@@ -47,23 +47,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return AlertDialog(
           backgroundColor: AppColors.surface,
           title: const Text('Configure API Server', style: TextStyle(color: AppColors.textPrimary)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Enter the backend server URL. E.g. http://10.0.2.2:5000 for Android emulator.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Server Base URL',
-                  prefixIcon: Icon(Icons.dns_outlined),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter backend server URL or choose a preset:',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ActionChip(
+                      label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 12)),
+                      onPressed: () => controller.text = 'http://10.0.2.2:5000',
+                    ),
+                    ActionChip(
+                      label: const Text('Localhost (127.0.0.1)', style: TextStyle(fontSize: 12)),
+                      onPressed: () => controller.text = 'http://127.0.0.1:5000',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Server Base URL',
+                    prefixIcon: Icon(Icons.dns_outlined),
+                    hintText: 'http://192.168.1.X:5000',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Note: If using a real physical phone, enter your computer\'s local Wi-Fi IP address (e.g. http://192.168.x.x:5000).',
+                  style: TextStyle(color: AppColors.textDisabled, fontSize: 11),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -234,16 +258,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(color: AppColors.error.withOpacity(0.3)),
                                       ),
-                                      child: Row(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Icon(Icons.error_outline, color: AppColors.error, size: 16),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              authState.error!,
-                                              style: const TextStyle(color: AppColors.error, fontSize: 13),
-                                            ),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.error_outline, color: AppColors.error, size: 16),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  authState.error!,
+                                                  style: const TextStyle(color: AppColors.error, fontSize: 13),
+                                                ),
+                                              ),
+                                            ],
                                           ),
+                                          if (authState.error!.contains('Cannot connect') ||
+                                              authState.error!.contains('Network error') ||
+                                              authState.error!.contains('timeout') ||
+                                              authState.error!.contains('⚙️')) ...[
+                                            const SizedBox(height: 8),
+                                            Align(
+                                              alignment: Alignment.centerRight,
+                                              child: TextButton.icon(
+                                                style: TextButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  minimumSize: Size.zero,
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                ),
+                                                onPressed: () => _showServerConfigDialog(context),
+                                                icon: const Icon(Icons.settings, size: 14, color: AppColors.primary),
+                                                label: const Text(
+                                                  'Configure Server URL',
+                                                  style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ),

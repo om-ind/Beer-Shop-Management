@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
@@ -102,7 +103,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return false;
       }
     } on DioException catch (e) {
-      final message = e.response?.data['message'] ?? 'Network error. Please try again.';
+      String message;
+      if (e.response?.data is Map && e.response?.data['message'] != null) {
+        message = e.response!.data['message'].toString();
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        message = 'Connection timeout to ${_api.baseUrl}. Check if server is running.';
+      } else if (e.type == DioExceptionType.connectionError || e.error is SocketException) {
+        message = 'Cannot connect to server at ${_api.baseUrl}.\nVerify backend is running on port 5000 or tap ⚙️ to change IP.';
+      } else if (e.response?.statusCode != null) {
+        message = 'Server error (${e.response?.statusCode}).';
+      } else {
+        message = 'Network error (${e.message ?? "Server unreachable"}). Tap ⚙️ to check server URL.';
+      }
       state = state.copyWith(isLoading: false, error: message);
       return false;
     } catch (e) {
