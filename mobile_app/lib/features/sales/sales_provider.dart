@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/models/sale_model.dart';
-import '../../core/providers/auth_provider.dart';
 
 class SalesState {
   final bool isLoading;
@@ -16,10 +15,15 @@ class SalesNotifier extends StateNotifier<SalesState> {
   final ApiClient _api;
   SalesNotifier(this._api) : super(const SalesState());
 
-  Future<void> load() async {
+  Future<void> load({String? from, String? to}) async {
     state = const SalesState(isLoading: true);
     try {
-      final res = await _api.get('/sales');
+      final params = <String, dynamic>{
+        'per_page': 100,
+        if (from != null) 'from': from,
+        if (to != null) 'to': to,
+      };
+      final res = await _api.get('/sales', params: params);
       final rawData = res.data;
       final List<dynamic> salesList = rawData is Map<String, dynamic>
           ? (rawData['sales'] as List<dynamic>? ?? [])
@@ -37,6 +41,18 @@ class SalesNotifier extends StateNotifier<SalesState> {
       await load();
       return true;
     } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteSale(int saleId) async {
+    try {
+      await _api.delete('/sales/$saleId');
+      state = SalesState(
+        sales: state.sales.where((s) => s.id != saleId).toList(),
+      );
+      return true;
+    } catch (e) {
       return false;
     }
   }

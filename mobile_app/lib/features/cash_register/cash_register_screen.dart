@@ -6,12 +6,12 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/models/product_model.dart';
 import '../../core/models/sale_model.dart';
-import '../../core/providers/auth_provider.dart';
 import '../../shared/widgets/loading_states.dart';
 import '../inventory/inventory_provider.dart';
 import '../customers/customers_provider.dart';
 import '../../core/utils/pdf_helper.dart';
 import 'cash_register_provider.dart';
+
 
 class CashRegisterScreen extends ConsumerStatefulWidget {
   const CashRegisterScreen({super.key});
@@ -79,8 +79,26 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
     final cartState = ref.watch(cashRegisterProvider);
     final customersState = ref.watch(customersProvider);
 
+    // Show error snackbar if sale failed
+    ref.listen<CashRegisterState>(cashRegisterProvider, (prev, next) {
+      if (next.error != null && next.error != prev?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.error_outline, color: AppColors.error),
+              const SizedBox(width: 8),
+              Expanded(child: Text(next.error!)),
+            ]),
+            backgroundColor: AppColors.surface2,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
     final customers = customersState.customers;
-    final selectedCustomerId = _selectedCustomerId ?? (customers.isNotEmpty ? customers.first.id : null);
+    // null = Walk-in (no customer selected)
+    final selectedCustomerId = _selectedCustomerId;
 
     final filtered = inventoryState.products.where((p) {
       if (_searchQuery.isEmpty) return true;
@@ -224,41 +242,43 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
                           ),
                           child: Column(
                             children: [
-                              // Customer Selector
-                              if (customers.isNotEmpty) ...[
-                                const Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text('Customer', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 12)),
+                              // Customer Selector (Walk-in is default / first option)
+                              const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text('Customer', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 12)),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface2,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.divider, width: 0.5),
                                 ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface2,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.divider, width: 0.5),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<int>(
-                                      value: selectedCustomerId,
-                                      isExpanded: true,
-                                      dropdownColor: AppColors.surface,
-                                      icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-                                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
-                                      items: customers.map((c) {
-                                        return DropdownMenuItem<int>(
-                                          value: c.id,
-                                          child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        setState(() => _selectedCustomerId = val);
-                                      },
-                                    ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int?>(
+                                    value: selectedCustomerId,
+                                    isExpanded: true,
+                                    dropdownColor: AppColors.surface,
+                                    icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                                    items: [
+                                      const DropdownMenuItem<int?>(
+                                        value: null,
+                                        child: Text('Walk-in Customer'),
+                                      ),
+                                      ...customers.map((c) => DropdownMenuItem<int?>(
+                                        value: c.id,
+                                        child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      )),
+                                    ],
+                                    onChanged: (val) {
+                                      setState(() => _selectedCustomerId = val);
+                                    },
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                              ],
+                              ),
+                              const SizedBox(height: 12),
 
                               // Sale Date Selector
                               const Align(
@@ -365,10 +385,11 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
       }
     }
 
+    // customerId null => Walk-in Customer (backend auto-creates)
     final completedSale = await ref.read(cashRegisterProvider.notifier).completeSale(
           paymentMethod: _paymentMethod,
           totalAmount: subtotal,
-          customerId: customerId,
+          customerId: customerId, // null is fine
           saleDate: DateFormat('yyyy-MM-dd').format(_saleDate),
         );
     if (completedSale != null && mounted) {
@@ -401,7 +422,7 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
-                PdfHelper.generateAndPrintInvoice(completedSale!);
+                PdfHelper.generateAndPrintInvoice(completedSale);
               },
               icon: const Icon(Icons.print, size: 18),
               label: const Text('Print PDF'),
@@ -409,21 +430,8 @@ class _CashRegisterScreenState extends ConsumerState<CashRegisterScreen> {
           ],
         ),
       );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: AppColors.error),
-              SizedBox(width: 8),
-              Text('Failed to complete sale. Please try again.'),
-            ],
-          ),
-          backgroundColor: AppColors.surface2,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
     }
+    // Error case: handled by ref.listen snackbar above
   }
 }
 

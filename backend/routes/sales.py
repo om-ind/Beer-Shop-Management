@@ -122,8 +122,9 @@ def get_sale_detail(sale_id):
         cursor.execute("""
             SELECT
                 p.name AS product_name, p.brand,
-                si.quantity, si.price, si.profit,
-                (si.quantity * si.price) AS subtotal
+                si.product_id,
+                si.quantity, si.price AS unit_price, si.profit,
+                (si.quantity * si.price) AS total
             FROM sale_items si
             JOIN products p ON p.id = si.product_id
             WHERE si.sale_id = %s
@@ -132,9 +133,9 @@ def get_sale_detail(sale_id):
         items = cursor.fetchall()
 
         for item in items:
-            item["price"] = float(item["price"] or 0)
+            item["unit_price"] = float(item["unit_price"] or 0)
             item["profit"] = float(item["profit"] or 0)
-            item["subtotal"] = float(item["subtotal"] or 0)
+            item["total"] = float(item["total"] or 0)
 
         sale["items"] = items
 
@@ -160,9 +161,6 @@ def create_sale():
     payment_mode = data.get("payment_mode")
     items = data.get("items", [])
 
-    if not customer_id:
-        return jsonify({"error": "Customer ID is required"}), 400
-
     if len(items) == 0:
         return jsonify({"error": "No items selected"}), 400
 
@@ -170,14 +168,28 @@ def create_sale():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        cursor.execute(
-            "SELECT * FROM customers WHERE id=%s AND shop_id=%s",
-            (customer_id, shop_id)
-        )
-        customer = cursor.fetchone()
-
-        if customer is None:
-            return jsonify({"error": f"Customer ID {customer_id} not found"}), 400
+        # Resolve walk-in customer if no customer_id provided
+        if not customer_id:
+            cursor.execute(
+                "SELECT id FROM customers WHERE shop_id=%s AND name='Walk-in Customer' LIMIT 1",
+                (shop_id,)
+            )
+            walkin = cursor.fetchone()
+            if walkin:
+                customer_id = walkin["id"]
+            else:
+                cursor.execute(
+                    "INSERT INTO customers (name, mobile, shop_id) VALUES ('Walk-in Customer', '', %s)",
+                    (shop_id,)
+                )
+                customer_id = cursor.lastrowid
+        else:
+            cursor.execute(
+                "SELECT id FROM customers WHERE id=%s AND shop_id=%s",
+                (customer_id, shop_id)
+            )
+            if not cursor.fetchone():
+                return jsonify({"error": f"Customer ID {customer_id} not found"}), 400
 
         total = 0
         product_cache = {}  # product_id -> product row, avoids double query
@@ -256,6 +268,49 @@ def create_sale():
             "sale_id": sale_id,
             "total_amount": float(total)
         })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@sales_bp.route("/sales/<int:sale_id>", methods=["DELETE"])
+@token_required
+def delete_sale(sale_id):
+    """Delete a sale and restore product stock."""
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("SELECT id, shop_id FROM sales WHERE id=%s", (sale_id,))
+        sale = cursor.fetchone()
+        if not sale:
+            return jsonify({"error": "Sale not found"}), 404
+
+        if not _is_admin() and sale["shop_id"] != _shop_id():
+            return jsonify({"error": "Forbidden"}), 403
+
+        # Restore stock
+        cursor.execute(
+            "SELECT product_id, quantity FROM sale_items WHERE sale_id=%s",
+            (sale_id,)
+        )
+        sale_items = cursor.fetchall()
+        for si in sale_items:
+            cursor.execute(
+                "UPDATE products SET stock = stock + %s WHERE id=%s",
+                (si["quantity"], si["product_id"])
+            )
+
+        cursor.execute("DELETE FROM sale_items WHERE sale_id=%s", (sale_id,))
+        cursor.execute("DELETE FROM sales WHERE id=%s", (sale_id,))
+        conn.commit()
+
+        return jsonify({"success": True, "message": "Sale deleted and stock restored"})
 
     except Exception as e:
         conn.rollback()

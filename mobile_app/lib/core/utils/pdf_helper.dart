@@ -4,7 +4,10 @@ import 'package:printing/printing.dart';
 import '../models/sale_model.dart';
 
 class PdfHelper {
-  static Future<void> generateAndPrintInvoice(SaleModel sale) async {
+  static Future<void> generateAndPrintInvoice(
+    SaleModel sale, {
+    String shopName = 'BEER SHOP',
+  }) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -24,7 +27,7 @@ class PdfHelper {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
-                          'BEER SHOP',
+                          shopName,
                           style: pw.TextStyle(
                             fontSize: 24,
                             fontWeight: pw.FontWeight.bold,

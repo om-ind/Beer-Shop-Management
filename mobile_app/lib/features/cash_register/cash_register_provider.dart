@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/models/product_model.dart';
 import '../../core/models/sale_model.dart';
-import '../../core/providers/auth_provider.dart';
 
 class CartItem {
   final int productId;
@@ -21,16 +20,24 @@ class CartItem {
 class CashRegisterState {
   final List<CartItem> items;
   final bool isProcessing;
+  final String? error;
 
   const CashRegisterState({
     this.items = const [],
     this.isProcessing = false,
+    this.error,
   });
 
-  CashRegisterState copyWith({List<CartItem>? items, bool? isProcessing}) =>
+  CashRegisterState copyWith({
+    List<CartItem>? items,
+    bool? isProcessing,
+    String? error,
+    bool clearError = false,
+  }) =>
       CashRegisterState(
         items: items ?? this.items,
         isProcessing: isProcessing ?? this.isProcessing,
+        error: clearError ? null : (error ?? this.error),
       );
 }
 
@@ -50,11 +57,14 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
         unitPrice: product.sellingPrice,
       ));
     }
-    state = state.copyWith(items: items);
+    state = state.copyWith(items: items, clearError: true);
   }
 
   void removeItem(int productId) {
-    state = state.copyWith(items: state.items.where((i) => i.productId != productId).toList());
+    state = state.copyWith(
+      items: state.items.where((i) => i.productId != productId).toList(),
+      clearError: true,
+    );
   }
 
   void incrementItem(int productId) {
@@ -80,18 +90,14 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
   void updateQty(int productId, int qty) {
     final items = [...state.items];
     final idx = items.indexWhere((i) => i.productId == productId);
-    if (idx >= 0) {
-      items[idx].qty = qty;
-    }
+    if (idx >= 0) items[idx].qty = qty;
     state = state.copyWith(items: items);
   }
 
   void updatePrice(int productId, double price) {
     final items = [...state.items];
     final idx = items.indexWhere((i) => i.productId == productId);
-    if (idx >= 0) {
-      items[idx].unitPrice = price;
-    }
+    if (idx >= 0) items[idx].unitPrice = price;
     state = state.copyWith(items: items);
   }
 
@@ -99,41 +105,31 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
     state = const CashRegisterState();
   }
 
+  /// Complete a sale. Returns the created [SaleModel] on success, null on failure.
+  /// Pass [customerId] = null to use Walk-in Customer (backend auto-creates one).
   Future<SaleModel?> completeSale({
     required String paymentMethod,
     required double totalAmount,
     int? customerId,
     String? saleDate,
   }) async {
-    state = state.copyWith(isProcessing: true);
+    state = state.copyWith(isProcessing: true, clearError: true);
     try {
-      int? targetCustomerId = customerId;
-      if (targetCustomerId == null) {
-        final custRes = await _api.get('/customers');
-        final custData = custRes.data as List<dynamic>;
-        if (custData.isNotEmpty) {
-          targetCustomerId = custData.first['id'] as int?;
-        }
-      }
-
-      if (targetCustomerId == null) {
-        throw Exception("No customer found to associate the sale.");
-      }
-
       final saleItems = state.items.map((i) => {
-        'product_id': i.productId,
-        'quantity': i.qty,
-        'selling_price': i.unitPrice,
-      }).toList();
+            'product_id': i.productId,
+            'quantity': i.qty,
+            'selling_price': i.unitPrice,
+          }).toList();
 
-      final res = await _api.post('/sales', data: {
+      final body = <String, dynamic>{
         'items': saleItems,
         'total_amount': totalAmount,
         'payment_mode': paymentMethod,
-        'customer_id': targetCustomerId,
+        if (customerId != null) 'customer_id': customerId,
         if (saleDate != null) 'sale_date': saleDate,
-      });
+      };
 
+      final res = await _api.post('/sales', data: body);
       final resData = res.data as Map<String, dynamic>;
       final saleId = resData['sale_id'] as int?;
 
@@ -145,8 +141,17 @@ class CashRegisterNotifier extends StateNotifier<CashRegisterState> {
 
       state = const CashRegisterState();
       return completedSale;
-    } catch (_) {
-      state = state.copyWith(isProcessing: false);
+    } catch (e) {
+      // Surface the real error — extract message from DioException if possible
+      String msg = e.toString();
+      try {
+        final dioErr = e as dynamic;
+        final respData = dioErr?.response?.data;
+        if (respData is Map && respData['error'] != null) {
+          msg = respData['error'].toString();
+        }
+      } catch (_) {}
+      state = state.copyWith(isProcessing: false, error: msg);
       return null;
     }
   }

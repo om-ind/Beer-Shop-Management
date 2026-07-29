@@ -1,4 +1,6 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
@@ -100,8 +102,10 @@ class ApiClient {
   }
 }
 
-// Shortcut to use anywhere
-void debugPrint(String msg) {
+// Riverpod provider — use ref.read(apiClientProvider) anywhere
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
+void _log(String msg) {
   // ignore: avoid_print
   print('[ApiClient] $msg');
 }
