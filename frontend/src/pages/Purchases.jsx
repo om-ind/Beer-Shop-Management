@@ -121,6 +121,7 @@ export default function Purchases() {
                                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice</th>
                                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Supplier</th>
                                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                                <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Transport</th>
                                 <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Amount</th>
                                 <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment</th>
                             </tr>
@@ -146,6 +147,18 @@ export default function Purchases() {
                                         {purchase.purchase_date
                                             ? new Date(purchase.purchase_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
                                             : "—"}
+                                    </td>
+                                    <td className="px-5 py-3.5 text-right text-xs">
+                                        {purchase.transport_total > 0 ? (
+                                            <div>
+                                                <span className="font-bold text-orange-600">₹{Number(purchase.transport_total).toFixed(2)}</span>
+                                                <div className="text-slate-400 text-[11px]">
+                                                    {purchase.total_cartons} ctns @ ₹{purchase.transport_per_carton}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400">—</span>
+                                        )}
                                     </td>
                                     <td className="px-5 py-3.5 text-right font-bold text-slate-800">
                                         ₹{Number(purchase.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}

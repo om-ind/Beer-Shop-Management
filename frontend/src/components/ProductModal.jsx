@@ -75,11 +75,10 @@ export default function ProductModal({
                     <input
                         type="text"
                         name="barcode"
-                        placeholder="Barcode"
+                        placeholder="Barcode (Optional)"
                         value={form.barcode}
                         onChange={handleChange}
                         className="border rounded p-2"
-                        required
                     />
 
                     <input

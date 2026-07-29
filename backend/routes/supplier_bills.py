@@ -121,18 +121,18 @@ def get_bills_overview():
         cursor.execute("""
             SELECT
                 IFNULL(SUM(total_amount - paid_amount), 0) AS grand_pending,
-                SUM(CASE
+                IFNULL(SUM(CASE
                     WHEN status != 'paid' AND due_date IS NOT NULL AND due_date < CURDATE()
                     THEN 1 ELSE 0
-                END) AS grand_overdue
+                END), 0) AS grand_overdue
             FROM supplier_bills
         """)
         totals = cursor.fetchone()
 
         return jsonify({
             "suppliers": rows,
-            "grand_pending": float(totals["grand_pending"]),
-            "grand_overdue": int(totals["grand_overdue"]),
+            "grand_pending": float(totals["grand_pending"] or 0),
+            "grand_overdue": int(totals["grand_overdue"] or 0),
         })
 
     finally:

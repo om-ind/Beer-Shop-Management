@@ -180,10 +180,11 @@ def create_sale():
             return jsonify({"error": f"Customer ID {customer_id} not found"}), 400
 
         total = 0
+        product_cache = {}  # product_id -> product row, avoids double query
 
         for item in items:
             cursor.execute(
-                "SELECT * FROM products WHERE id=%s AND shop_id=%s",
+                "SELECT id, name, stock, selling_price, purchase_price FROM products WHERE id=%s AND shop_id=%s",
                 (item["product_id"], shop_id)
             )
             product = cursor.fetchone()
@@ -200,6 +201,7 @@ def create_sale():
                 item_price = float(product["selling_price"])
 
             total += item_price * item["quantity"]
+            product_cache[item["product_id"]] = (product, item_price)
 
         invoice_no = "INV" + datetime.now().strftime("%Y%m%d%H%M%S")
         sale_date = data.get("sale_date") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -216,16 +218,7 @@ def create_sale():
         sale_id = cursor.lastrowid
 
         for item in items:
-            cursor.execute(
-                "SELECT selling_price, purchase_price FROM products WHERE id=%s",
-                (item["product_id"],)
-            )
-            product = cursor.fetchone()
-            try:
-                item_price = float(item.get("selling_price"))
-            except (ValueError, TypeError):
-                item_price = float(product["selling_price"])
-
+            product, item_price = product_cache[item["product_id"]]
             profit = (item_price - float(product["purchase_price"])) * item["quantity"]
 
             cursor.execute(
@@ -242,8 +235,6 @@ def create_sale():
                 (item["quantity"], item["product_id"])
             )
 
-        conn.commit()
-
         if payment_mode == "Credit":
             cursor.execute(
                 "UPDATE customers SET credit_balance = credit_balance + %s WHERE id = %s",
@@ -256,7 +247,8 @@ def create_sale():
                 """,
                 (customer_id, -float(total), f"Credit sale — Invoice {invoice_no}")
             )
-            conn.commit()
+
+        conn.commit()  # single commit covers sale + items + stock + credit
 
         return jsonify({
             "success": True,

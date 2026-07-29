@@ -16,10 +16,13 @@ from routes.cash_register import cash_register_bp
 from routes.supplier_bills import supplier_bills_bp
 from routes.expenses import expenses_bp
 from routes.shops import shops_bp
+from routes.bill_scanner import bill_scanner_bp
+from routes.excise import excise_bp
+from routes.import_data import import_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.register_blueprint(inventory_bp)
 app.register_blueprint(sales_bp)
@@ -37,6 +40,9 @@ app.register_blueprint(cash_register_bp)
 app.register_blueprint(supplier_bills_bp)
 app.register_blueprint(expenses_bp)
 app.register_blueprint(shops_bp)
+app.register_blueprint(bill_scanner_bp)
+app.register_blueprint(excise_bp)
+app.register_blueprint(import_bp)
 
 
 @app.route("/")

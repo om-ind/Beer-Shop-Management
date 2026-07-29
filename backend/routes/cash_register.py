@@ -1,3 +1,6 @@
+import re
+import time
+import random
 from flask import Blueprint, request, jsonify, g
 from database import get_connection
 from datetime import date
@@ -28,30 +31,48 @@ def get_summary():
     cursor = conn.cursor(dictionary=True)
 
     shop_id = _get_shop_id()
-    sf = f"WHERE shop_id = {shop_id}" if shop_id else ""
-    sf_today = f"AND shop_id = {shop_id}" if shop_id else ""
 
     try:
-        cursor.execute(f"""
-            SELECT
-                IFNULL(SUM(CASE WHEN entry_type = 'cash_in'  THEN amount ELSE 0 END), 0) AS cash_in,
-                IFNULL(SUM(CASE WHEN entry_type = 'cash_out' THEN amount ELSE 0 END), 0) AS cash_out,
-                IFNULL(SUM(CASE WHEN entry_type = 'bank_in'  THEN amount ELSE 0 END), 0) AS bank_in,
-                IFNULL(SUM(CASE WHEN entry_type = 'bank_out' THEN amount ELSE 0 END), 0) AS bank_out
-            FROM cash_register {sf}
-        """)
+        if shop_id:
+            cursor.execute("""
+                SELECT
+                    IFNULL(SUM(CASE WHEN entry_type = 'cash_in'  THEN amount ELSE 0 END), 0) AS cash_in,
+                    IFNULL(SUM(CASE WHEN entry_type = 'cash_out' THEN amount ELSE 0 END), 0) AS cash_out,
+                    IFNULL(SUM(CASE WHEN entry_type = 'bank_in'  THEN amount ELSE 0 END), 0) AS bank_in,
+                    IFNULL(SUM(CASE WHEN entry_type = 'bank_out' THEN amount ELSE 0 END), 0) AS bank_out
+                FROM cash_register
+                WHERE shop_id = %s
+            """, (shop_id,))
+        else:
+            cursor.execute("""
+                SELECT
+                    IFNULL(SUM(CASE WHEN entry_type = 'cash_in'  THEN amount ELSE 0 END), 0) AS cash_in,
+                    IFNULL(SUM(CASE WHEN entry_type = 'cash_out' THEN amount ELSE 0 END), 0) AS cash_out,
+                    IFNULL(SUM(CASE WHEN entry_type = 'bank_in'  THEN amount ELSE 0 END), 0) AS bank_in,
+                    IFNULL(SUM(CASE WHEN entry_type = 'bank_out' THEN amount ELSE 0 END), 0) AS bank_out
+                FROM cash_register
+            """)
         row = cursor.fetchone()
 
         cash_balance = float(row["cash_in"]) - float(row["cash_out"])
         bank_balance = float(row["bank_in"]) - float(row["bank_out"])
 
-        cursor.execute(f"""
-            SELECT
-                IFNULL(SUM(CASE WHEN entry_type IN ('cash_in','bank_in')  THEN amount ELSE 0 END), 0) AS today_in,
-                IFNULL(SUM(CASE WHEN entry_type IN ('cash_out','bank_out') THEN amount ELSE 0 END), 0) AS today_out
-            FROM cash_register
-            WHERE entry_date = CURDATE() {sf_today}
-        """)
+        if shop_id:
+            cursor.execute("""
+                SELECT
+                    IFNULL(SUM(CASE WHEN entry_type IN ('cash_in','bank_in')  THEN amount ELSE 0 END), 0) AS today_in,
+                    IFNULL(SUM(CASE WHEN entry_type IN ('cash_out','bank_out') THEN amount ELSE 0 END), 0) AS today_out
+                FROM cash_register
+                WHERE entry_date = CURDATE() AND shop_id = %s
+            """, (shop_id,))
+        else:
+            cursor.execute("""
+                SELECT
+                    IFNULL(SUM(CASE WHEN entry_type IN ('cash_in','bank_in')  THEN amount ELSE 0 END), 0) AS today_in,
+                    IFNULL(SUM(CASE WHEN entry_type IN ('cash_out','bank_out') THEN amount ELSE 0 END), 0) AS today_out
+                FROM cash_register
+                WHERE entry_date = CURDATE()
+            """)
         today = cursor.fetchone()
 
         return jsonify({
@@ -218,15 +239,13 @@ def add_entry():
 
         main_id = None
         if is_transfer and counterpart_type:
-            import time
-            import random
             ref_token = f"TRF-{int(time.time())}-{random.randint(100, 999)}"
             desc_with_ref = f"{description} [Ref: {ref_token}]".strip()
 
             # Insert main entry
             cursor.execute("""
-                INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO cash_register (entry_type, category, amount, description, entry_date, supplier_bill_id, shop_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (entry_type, category, amount, desc_with_ref, entry_date, supplier_bill_id, shop_id))
             main_id = cursor.lastrowid
 
@@ -275,7 +294,6 @@ def delete_entry(entry_id):
         amount = float(row["amount"] or 0)
 
         # Check for transfer ref e.g. [Ref: TRF-123456-789]
-        import re
         match = re.search(r"\[Ref:\s*(TRF-\d+-\d+)\]", description)
 
         cursor.close()

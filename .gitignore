@@ -1,0 +1,36 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Node & Frontend
+node_modules/
+dist/
+build/
+package-lock.json
+
+# Mobile & Android
+mobile_app/build/
+mobile_app/android/app/build/
+mobile_app/android/.gradle/
+mobile_app/pubspec.lock
+*.apk
+*.aab
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

@@ -44,6 +44,9 @@ def add_product():
         if not shop_id:
             return jsonify({"error": "shop_id is required"}), 400
 
+    raw_barcode = data.get("barcode")
+    barcode = raw_barcode.strip() if isinstance(raw_barcode, str) and raw_barcode.strip() else None
+
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -52,7 +55,7 @@ def add_product():
         (barcode, name, brand, category, purchase_price, selling_price, stock, minimum_stock, expiry_date, shop_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            data.get("barcode"),
+            barcode,
             data.get("name"),
             data.get("brand"),
             data.get("category"),
@@ -94,7 +97,8 @@ def update_product(id):
             if not row or row[0] != shop_id:
                 return jsonify({"error": "Forbidden"}), 403
 
-        barcode = data.get("barcode", "").strip()
+        raw_barcode = data.get("barcode")
+        barcode = raw_barcode.strip() if isinstance(raw_barcode, str) and raw_barcode.strip() else None
         if barcode:
             cursor.execute(
                 "SELECT id FROM products WHERE barcode = %s AND id != %s AND shop_id = %s",
@@ -109,7 +113,7 @@ def update_product(id):
             selling_price=%s, stock=%s, minimum_stock=%s, expiry_date=%s
         WHERE id=%s
         """, (
-            barcode or None,
+            barcode,
             data.get("name"),
             data.get("brand"),
             data.get("category"),
@@ -118,7 +122,7 @@ def update_product(id):
             data.get("stock"),
             data.get("minimum_stock"),
             data.get("expiry_date") or None,
-            id
+            id,
         ))
         conn.commit()
         return jsonify({"message": "Product Updated"})

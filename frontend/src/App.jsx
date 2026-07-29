@@ -16,10 +16,12 @@ import Expenses from "./pages/Expenses";
 import LowStock from "./pages/LowStock";
 import AdminDashboard from "./pages/AdminDashboard";
 import Shops from "./pages/Shops";
+import BrandRegister from "./pages/BrandRegister";
+import DailySalesRegister from "./pages/DailySalesRegister";
+import ExciseStatement from "./pages/ExciseStatement";
+import ImportData from "./pages/ImportData";
 
-import ProtectedRoute from "./components/ProtectedRoute";
-import RoleProtectedRoute from "./components/RoleProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
+import RequireAuth from "./components/RequireAuth";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -33,8 +35,6 @@ function RootRedirect() {
 }
 
 function App() {
-
-
     return (
         <>
             <ToastContainer
@@ -50,167 +50,45 @@ function App() {
             />
 
             <Routes>
-
                 {/* Public */}
                 <Route path="/login" element={<Login />} />
-
-                {/* Smart root redirect — Admin goes to admin dashboard */}
                 <Route path="/" element={<RootRedirect />} />
 
+                {/* All authenticated users */}
+                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/settings"  element={<RequireAuth><Settings /></RequireAuth>} />
 
-                {/* Dashboard — all roles */}
-                <Route
-                    path="/dashboard"
-                    element={
-                        <ProtectedRoute>
-                            <Dashboard />
-                        </ProtectedRoute>
-                    }
-                />
+                {/* Owner + Manager + Cashier */}
+                <Route path="/sales"     element={<RequireAuth roles={["Owner","Manager","Cashier"]}><Sales /></RequireAuth>} />
+                <Route path="/customers" element={<RequireAuth roles={["Owner","Manager","Cashier"]}><Customers /></RequireAuth>} />
 
-                {/* Products — Owner, Manager */}
-                <Route
-                    path="/products"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <Products />
-                        </RoleProtectedRoute>
-                    }
-                />
+                {/* Owner + Manager */}
+                <Route path="/products"      element={<RequireAuth roles={["Owner","Manager"]}><Products /></RequireAuth>} />
+                <Route path="/purchases"     element={<RequireAuth roles={["Owner","Manager"]}><Purchases /></RequireAuth>} />
+                <Route path="/suppliers"     element={<RequireAuth roles={["Owner","Manager"]}><Suppliers /></RequireAuth>} />
+                <Route path="/reports"       element={<RequireAuth roles={["Owner","Manager"]}><Reports /></RequireAuth>} />
+                <Route path="/analytics"     element={<RequireAuth roles={["Owner","Manager"]}><Analytics /></RequireAuth>} />
+                <Route path="/cash-register" element={<RequireAuth roles={["Owner","Manager"]}><CashRegister /></RequireAuth>} />
+                <Route path="/expenses"      element={<RequireAuth roles={["Owner","Manager"]}><Expenses /></RequireAuth>} />
+                <Route path="/low-stock"     element={<RequireAuth roles={["Owner","Manager"]}><LowStock /></RequireAuth>} />
 
-                {/* Sales — all roles */}
-                <Route
-                    path="/sales"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager", "Cashier"]}>
-                            <Sales />
-                        </RoleProtectedRoute>
-                    }
-                />
+                {/* Excise Compliance — Owner + Manager */}
+                <Route path="/excise/brands"          element={<RequireAuth roles={["Owner","Manager"]}><BrandRegister /></RequireAuth>} />
+                <Route path="/excise/daily-register"  element={<RequireAuth roles={["Owner","Manager"]}><DailySalesRegister /></RequireAuth>} />
+                <Route path="/excise/monthly-statement" element={<RequireAuth roles={["Owner","Manager"]}><ExciseStatement /></RequireAuth>} />
 
-                {/* Purchases — Owner, Manager */}
-                <Route
-                    path="/purchases"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <Purchases />
-                        </RoleProtectedRoute>
-                    }
-                />
+                {/* Data Import — Owner only */}
+                <Route path="/import" element={<RequireAuth roles={["Owner"]}><ImportData /></RequireAuth>} />
 
-                {/* Customers — all roles */}
-                <Route
-                    path="/customers"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager", "Cashier"]}>
-                            <Customers />
-                        </RoleProtectedRoute>
-                    }
-                />
+                {/* Owner only */}
+                <Route path="/users" element={<RequireAuth roles={["Owner"]}><Users /></RequireAuth>} />
 
-                {/* Suppliers — Owner, Manager */}
-                <Route
-                    path="/suppliers"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <Suppliers />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* Reports — Owner, Manager */}
-                <Route
-                    path="/reports"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <Reports />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* Analytics — Owner, Manager */}
-                <Route
-                    path="/analytics"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <Analytics />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* Users — Owner only */}
-                <Route
-                    path="/users"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner"]}>
-                            <Users />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* Settings — all roles */}
-                <Route
-                    path="/settings"
-                    element={
-                        <ProtectedRoute>
-                            <Settings />
-                        </ProtectedRoute>
-                    }
-                />
-
-                {/* Cash Register — Owner, Manager */}
-                <Route
-                    path="/cash-register"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <CashRegister />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* Expenses — Owner, Manager */}
-                <Route
-                    path="/expenses"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <Expenses />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* Low Stock — Owner, Manager */}
-                <Route
-                    path="/low-stock"
-                    element={
-                        <RoleProtectedRoute allowedRoles={["Owner", "Manager"]}>
-                            <LowStock />
-                        </RoleProtectedRoute>
-                    }
-                />
-
-                {/* ─── Admin-only routes ─── */}
-                <Route
-                    path="/admin/dashboard"
-                    element={
-                        <AdminRoute>
-                            <AdminDashboard />
-                        </AdminRoute>
-                    }
-                />
-
-                <Route
-                    path="/admin/shops"
-                    element={
-                        <AdminRoute>
-                            <Shops />
-                        </AdminRoute>
-                    }
-                />
-
+                {/* Admin only */}
+                <Route path="/admin/dashboard" element={<RequireAuth roles={["Admin"]}><AdminDashboard /></RequireAuth>} />
+                <Route path="/admin/shops"     element={<RequireAuth roles={["Admin"]}><Shops /></RequireAuth>} />
             </Routes>
         </>
     );
-
 }
 
 export default App;

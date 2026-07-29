@@ -3,6 +3,7 @@ import bcrypt
 
 from database import get_connection
 from utils.jwt_helper import generate_token
+from utils.auth_middleware import token_required
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -50,14 +51,34 @@ def login():
             "message": "Account is deactivated. Please contact Admin."
         }), 403
 
-    if not bcrypt.checkpw(
-        password.encode(),
-        user["password"].encode()
-    ):
+    password_db = user["password"]
+    pwd_matched = False
+    try:
+        if password_db.startswith("$2b$") or password_db.startswith("$2a$"):
+            pwd_matched = bcrypt.checkpw(password.encode(), password_db.encode())
+        else:
+            pwd_matched = (password == password_db)
+    except Exception:
+        pwd_matched = (password == password_db)
+
+    if not pwd_matched:
         return jsonify({
             "success": False,
             "message": "Invalid Password"
         }), 401
+
+    # Auto-upgrade plaintext passwords to bcrypt hash on successful login
+    if not (password_db.startswith("$2b$") or password_db.startswith("$2a$")):
+        try:
+            hashed_pwd = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode('utf-8')
+            up_conn = get_connection()
+            up_cursor = up_conn.cursor()
+            up_cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_pwd, user["id"]))
+            up_conn.commit()
+            up_cursor.close()
+            up_conn.close()
+        except Exception as e:
+            print("Notice: Could not auto-hash user password:", e)
 
     token = generate_token(user)
 
@@ -75,15 +96,17 @@ def login():
 
 
 @auth_bp.route("/auth/change-password", methods=["PUT"])
+@token_required
 def change_password():
-
+    from flask import g
     data = request.get_json()
 
-    username = data.get("username")
+    # Username comes from the verified token, not the request body
+    username = g.user.get("username")
     current_password = data.get("current_password")
     new_password = data.get("new_password")
 
-    if not username or not current_password or not new_password:
+    if not current_password or not new_password:
         return jsonify({
             "success": False,
             "message": "All fields are required"

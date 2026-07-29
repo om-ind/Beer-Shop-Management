@@ -19,6 +19,10 @@ import {
     FaExclamationTriangle,
     FaStore,
     FaTachometerAlt,
+    FaFileAlt,
+    FaBookOpen,
+    FaClipboardList,
+    FaFileImport,
 } from "react-icons/fa";
 
 // Menu visible to shop users (Owner / Manager / Cashier)
@@ -35,7 +39,13 @@ const SHOP_MENU = [
     { icon: <FaChartBar />, label: "Reports", path: "/reports", roles: ["Owner", "Manager"] },
     { icon: <FaRobot />, label: "Analytics", path: "/analytics", roles: ["Owner", "Manager"] },
     { icon: <FaUserShield />, label: "Users", path: "/users", roles: ["Owner"] },
+    { icon: <FaFileImport />, label: "Import Data", path: "/import", roles: ["Owner"] },
     { icon: <FaCog />, label: "Settings", path: "/settings", roles: ["Owner", "Manager", "Cashier"] },
+    // ── Excise Compliance ──
+    { divider: true, label: "Excise", roles: ["Owner", "Manager"] },
+    { icon: <FaBookOpen />, label: "Brand Register", path: "/excise/brands", roles: ["Owner", "Manager"] },
+    { icon: <FaClipboardList />, label: "Daily Register", path: "/excise/daily-register", roles: ["Owner", "Manager"] },
+    { icon: <FaFileAlt />, label: "Monthly Statement", path: "/excise/monthly-statement", roles: ["Owner", "Manager"] },
 ];
 
 // Menu visible to Admin only
@@ -89,28 +99,37 @@ export default function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                {menu.map((item) => (
-                    <NavLink
-                        key={item.label}
-                        to={item.path}
-                        className={({ isActive }) =>
-                            `flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                                ? isAdmin
-                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                                    : "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                                : "text-slate-300 hover:bg-slate-700/60 hover:text-white"
-                            }`
-                        }
-                    >
-                        <span className="text-base">{item.icon}</span>
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && lowStockCount > 0 && (
-                            <span className="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 shadow">
-                                {lowStockCount}
-                            </span>
-                        )}
-                    </NavLink>
-                ))}
+                {menu.map((item) => {
+                    if (item.divider) {
+                        return (
+                            <div key={item.label} className="pt-3 pb-1 px-2">
+                                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
+                            </div>
+                        );
+                    }
+                    return (
+                        <NavLink
+                            key={item.label}
+                            to={item.path}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                                    ? isAdmin
+                                        ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                                        : "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                                    : "text-slate-300 hover:bg-slate-700/60 hover:text-white"
+                                }`
+                            }
+                        >
+                            <span className="text-base">{item.icon}</span>
+                            <span className="flex-1">{item.label}</span>
+                            {item.badge && lowStockCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 shadow">
+                                    {lowStockCount}
+                                </span>
+                            )}
+                        </NavLink>
+                    );
+                })}
             </nav>
 
             {/* User Profile + Logout */}

@@ -1,21 +1,8 @@
 import api from "../api/api";
 
 export async function login(username, password) {
-
-    console.log("4. Sending request to backend");
-
-    const response = await api.post("/login", {
-
-        username,
-
-        password,
-
-    });
-
-    console.log("5. Backend response", response);
-
+    const response = await api.post("/login", { username, password });
     return response.data;
-
 }
 
 export function logout() {
