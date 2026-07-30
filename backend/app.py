@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 
 from routes.inventory import inventory_bp
 from routes.sales import sales_bp
@@ -50,6 +50,15 @@ def home():
     return {
         "Project": "Beer Shop Management"
     }
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    response = jsonify({
+        "success": False,
+        "message": f"Server error: {str(e)}"
+    })
+    response.status_code = 500
+    return response
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

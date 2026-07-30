@@ -22,22 +22,29 @@ def login():
             "message": "Username and Password are required"
         }), 400
 
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    cursor.execute(
-        """
-        SELECT id, username, password, role, full_name, shop_id, is_active
-        FROM users
-        WHERE username=%s
-        """,
-        (username,)
-    )
+        cursor.execute(
+            """
+            SELECT id, username, password, role, full_name, shop_id, is_active
+            FROM users
+            WHERE username=%s
+            """,
+            (username,)
+        )
 
-    user = cursor.fetchone()
+        user = cursor.fetchone()
 
-    cursor.close()
-    conn.close()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print("Auth DB Error:", e)
+        return jsonify({
+            "success": False,
+            "message": f"Database connection error: {str(e)}"
+        }), 500
 
     if user is None:
         return jsonify({
