@@ -140,20 +140,25 @@ def download_invoice(sale_id):
     elements.append(Spacer(1, 16))
 
     # Items Table
-    header = ["#", "Product", "Brand", "Qty", "Unit Price", "Amount"]
+    header = ["#", "Product", "Brand", "Size", "Qty", "Unit Price", "Amount"]
     rows = [header]
 
     for i, item in enumerate(sale.get("items", []), 1):
+        size_ml = item.get("pack_size_ml")
+        size_str = f"{size_ml} ml" if size_ml else "—"
+        unit_price = item.get("unit_price") if item.get("unit_price") is not None else item.get("price", 0)
+        total_amt = item.get("total") if item.get("total") is not None else item.get("subtotal", 0)
         rows.append([
             str(i),
             item.get("product_name", ""),
             item.get("brand", ""),
+            size_str,
             str(item.get("quantity", 0)),
-            f"Rs. {item.get('price', 0):.2f}",
-            f"Rs. {item.get('subtotal', 0):.2f}",
+            f"Rs. {unit_price:.2f}",
+            f"Rs. {total_amt:.2f}",
         ])
 
-    items_table = Table(rows, colWidths=["5%", "30%", "20%", "10%", "17.5%", "17.5%"])
+    items_table = Table(rows, colWidths=["5%", "25%", "18%", "12%", "10%", "15%", "15%"])
     items_table.setStyle(TableStyle([
         # Header row
         ("BACKGROUND", (0, 0), (-1, 0), DARK),

@@ -94,10 +94,17 @@ function SaleDetailModal({ saleId, onClose }) {
                                 {(sale.items || []).map((item, idx) => (
                                     <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                                         <div>
-                                            <p className="font-semibold text-slate-700 text-sm">{item.product_name}</p>
-                                            <p className="text-xs text-slate-400">{item.brand} · ₹{item.price} × {item.quantity}</p>
+                                            <p className="font-semibold text-slate-700 text-sm flex items-center gap-2">
+                                                <span>{item.product_name}</span>
+                                                {(item.pack_size_ml || item.size) && (
+                                                    <span className="text-xs font-medium bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                                                        {item.pack_size_ml ? `${item.pack_size_ml} ml` : item.size}
+                                                    </span>
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-slate-400">{item.brand} · ₹{item.unit_price || item.price} × {item.quantity}</p>
                                         </div>
-                                        <p className="font-bold text-slate-800">₹{item.subtotal.toFixed(2)}</p>
+                                        <p className="font-bold text-slate-800">₹{(item.total || item.subtotal || 0).toFixed(2)}</p>
                                     </div>
                                 ))}
                             </div>

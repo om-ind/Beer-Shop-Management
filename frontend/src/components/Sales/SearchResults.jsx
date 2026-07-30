@@ -26,8 +26,13 @@ export default function SearchResults({
 
                     <div>
 
-                        <div className="font-semibold">
-                            {product.name}
+                        <div className="font-semibold flex items-center gap-2">
+                            <span>{product.name}</span>
+                            {(product.pack_size_ml || product.size) && (
+                                <span className="text-xs font-medium bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    {product.pack_size_ml ? `${product.pack_size_ml} ml` : product.size}
+                                </span>
+                            )}
                         </div>
 
                         <div className="text-sm text-gray-500">

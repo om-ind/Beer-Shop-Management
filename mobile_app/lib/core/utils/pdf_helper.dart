@@ -77,9 +77,10 @@ class PdfHelper {
                     ),
                     // Item Rows
                     ...sale.items.map((item) {
+                      final title = item.packSizeMl != null ? '${item.productName} (${item.packSizeMl} ml)' : item.productName;
                       return pw.TableRow(
                         children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(item.productName)),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(title)),
                           pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('${item.quantity}', textAlign: pw.TextAlign.center)),
                           pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Rs. ${item.unitPrice.toStringAsFixed(2)}', textAlign: pw.TextAlign.right)),
                           pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Rs. ${item.total.toStringAsFixed(2)}', textAlign: pw.TextAlign.right)),

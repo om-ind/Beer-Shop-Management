@@ -19,6 +19,8 @@ export default function CartTable({
                         Product
                     </th>
 
+                    <th className="p-3 text-center">Size / ML</th>
+
                     <th>Qty</th>
 
                     <th>Price</th>
@@ -38,7 +40,7 @@ export default function CartTable({
                     <tr>
 
                         <td
-                            colSpan="5"
+                            colSpan="6"
                             className="text-center py-8"
                         >
                             Cart Empty
@@ -57,6 +59,10 @@ export default function CartTable({
 
                             <td className="p-3 font-medium text-slate-700">
                                 {item.name}
+                            </td>
+
+                            <td className="p-3 text-center text-sm font-semibold text-slate-600">
+                                {item.pack_size_ml ? `${item.pack_size_ml} ml` : (item.size || "—")}
                             </td>
 
                             <td>

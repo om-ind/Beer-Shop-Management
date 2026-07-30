@@ -121,7 +121,7 @@ def get_sale_detail(sale_id):
 
         cursor.execute("""
             SELECT
-                p.name AS product_name, p.brand,
+                p.name AS product_name, p.brand, p.pack_size_ml,
                 si.product_id,
                 si.quantity, si.price AS unit_price, si.profit,
                 (si.quantity * si.price) AS total

@@ -65,6 +65,10 @@ export default function Receipt({
                             Product
                         </th>
 
+                        <th className="border p-2 text-center">
+                            Size
+                        </th>
+
                         <th className="border p-2">
                             Qty
                         </th>
@@ -89,7 +93,13 @@ export default function Receipt({
 
                             <td className="border p-2">
 
-                                {item.name}
+                                {item.name || item.product_name}
+
+                            </td>
+
+                            <td className="border text-center">
+
+                                {item.pack_size_ml ? `${item.pack_size_ml} ml` : (item.size || "—")}
 
                             </td>
 

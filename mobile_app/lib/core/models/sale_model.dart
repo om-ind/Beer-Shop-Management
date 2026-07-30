@@ -39,6 +39,7 @@ class SaleModel {
 class SaleItemModel {
   final int productId;
   final String productName;
+  final int? packSizeMl;
   final int quantity;
   final double unitPrice;
   final double total;
@@ -46,6 +47,7 @@ class SaleItemModel {
   const SaleItemModel({
     required this.productId,
     required this.productName,
+    this.packSizeMl,
     required this.quantity,
     required this.unitPrice,
     required this.total,
@@ -54,9 +56,10 @@ class SaleItemModel {
   factory SaleItemModel.fromJson(Map<String, dynamic> json) => SaleItemModel(
         productId: json['product_id'] ?? 0,
         productName: json['product_name'] ?? '',
+        packSizeMl: json['pack_size_ml'] != null ? int.tryParse(json['pack_size_ml'].toString()) : null,
         quantity: json['quantity'] ?? 0,
-        unitPrice: _toDouble(json['unit_price']),
-        total: _toDouble(json['total']),
+        unitPrice: _toDouble(json['unit_price'] ?? json['price']),
+        total: _toDouble(json['total'] ?? json['subtotal']),
       );
 
   static double _toDouble(dynamic v) =>
