@@ -18,10 +18,12 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-  # React Frontend PWA
-  - type: web
+  # React Frontend PWA (Render Static Site - 100% Free)
+  - type: static
     name: beer-shop-frontend
-    runtime: docker
-    dockerContext: ./frontend
-    dockerfilePath: ./frontend/Dockerfile
-    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
