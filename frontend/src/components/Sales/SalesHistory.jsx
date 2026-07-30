@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { FaHistory, FaEye, FaFilePdf, FaChevronLeft, FaChevronRight, FaTimes, FaReceipt, FaDownload, FaCalendarAlt } from "react-icons/fa";
-import { getSales, getSaleDetail, downloadInvoice, updateSale } from "../../services/salesService";
+import { FaHistory, FaEye, FaFilePdf, FaChevronLeft, FaChevronRight, FaTimes, FaReceipt, FaDownload, FaCalendarAlt, FaTrashAlt, FaExclamationTriangle } from "react-icons/fa";
+import { getSales, getSaleDetail, downloadInvoice, updateSale, deleteSale } from "../../services/salesService";
 
 function SaleDetailModal({ saleId, onClose }) {
     const [sale, setSale] = useState(null);
@@ -140,6 +140,8 @@ export default function SalesHistory() {
     const [downloadingId, setDownloadingId] = useState(null);
     const [editingSaleId, setEditingSaleId] = useState(null);
     const [editingDate, setEditingDate] = useState("");
+    const [confirmDelete, setConfirmDelete] = useState(null); // sale object to delete
+    const [deletingId, setDeletingId] = useState(null);
 
     async function handleSaveDate(saleId) {
         if (!editingDate) return;
@@ -177,6 +179,21 @@ export default function SalesHistory() {
             toast.error("PDF download failed — is reportlab installed?");
         } finally {
             setDownloadingId(null);
+        }
+    }
+
+    async function handleDeleteConfirmed() {
+        if (!confirmDelete) return;
+        setDeletingId(confirmDelete.id);
+        setConfirmDelete(null);
+        try {
+            await deleteSale(confirmDelete.id);
+            toast.success(`Sale ${confirmDelete.invoice_no} deleted and stock restored.`);
+            loadSales();
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Failed to delete sale");
+        } finally {
+            setDeletingId(null);
         }
     }
 
@@ -306,6 +323,17 @@ export default function SalesHistory() {
                                                         ? <div className="w-3 h-3 border-2 border-emerald-400 border-t-emerald-700 rounded-full animate-spin" />
                                                         : <FaDownload />}
                                                 </button>
+                                                <button
+                                                    id={`delete-sale-${sale.id}`}
+                                                    onClick={() => setConfirmDelete(sale)}
+                                                    disabled={deletingId === sale.id}
+                                                    className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                                    title="Delete Sale"
+                                                >
+                                                    {deletingId === sale.id
+                                                        ? <div className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" />
+                                                        : <FaTrashAlt />}
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -347,6 +375,40 @@ export default function SalesHistory() {
                     saleId={viewingSale}
                     onClose={() => setViewingSale(null)}
                 />
+            )}
+
+            {/* Delete Confirm Modal */}
+            {confirmDelete && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-500">
+                                <FaExclamationTriangle className="text-lg" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800">Delete Sale?</h3>
+                                <p className="text-xs text-slate-500 font-mono">{confirmDelete.invoice_no}</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-5">
+                            This will permanently delete the sale and <span className="font-semibold text-slate-800">restore stock</span> for all items. This cannot be undone.
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setConfirmDelete(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteConfirmed}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition shadow-sm shadow-red-200"
+                            >
+                                Yes, Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

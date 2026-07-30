@@ -39,3 +39,8 @@ export async function updateSale(saleId, data) {
     const response = await api.put(`/sales/${saleId}`, data);
     return response.data;
 }
+
+export async function deleteSale(saleId) {
+    const response = await api.delete(`/sales/${saleId}`);
+    return response.data;
+}

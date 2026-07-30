@@ -10,10 +10,6 @@ const getBaseUrl = () => {
   }
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    if (host.includes('onrender.com')) {
-      const backendHost = host.replace('frontend', 'backend');
-      return `https://${backendHost}`;
-    }
     return `http://${host}:5000`;
   }
   return 'http://localhost:5000';
