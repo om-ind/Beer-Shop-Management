@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: beer_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: beer_shop_v2
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ./database/migration_excise.sql:/docker-entrypoint-initdb.d/2_migration_excise.sql
+      - ./database/migration_multi_shop.sql:/docker-entrypoint-initdb.d/3_migration_multi_shop.sql
+
+  backend:
+    build: ./backend
+    container_name: beer_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: beer_shop_v2
+      JWT_SECRET: super_secret_jwt_key_change_me
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: beer_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

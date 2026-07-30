@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { getLowStockProducts } from "../services/lowStockService";
+import { usePWAInstall } from "../hooks/usePWAInstall";
 import {
     FaHome,
     FaBox,
@@ -23,6 +24,7 @@ import {
     FaBookOpen,
     FaClipboardList,
     FaFileImport,
+    FaDownload,
 } from "react-icons/fa";
 
 // Menu visible to shop users (Owner / Manager / Cashier)
@@ -62,10 +64,11 @@ const ROLE_STYLE = {
     Admin:   "bg-purple-400/20 text-purple-300",
 };
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
     const { user, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
     const [lowStockCount, setLowStockCount] = useState(0);
+    const { isInstallable, promptInstall } = usePWAInstall();
 
     useEffect(() => {
         if (!isAdmin) {
@@ -85,17 +88,38 @@ export default function Sidebar() {
     }
 
     return (
-        <aside className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
+        <>
+            {/* Mobile backdrop */}
+            {isOpen && (
+                <div
+                    onClick={onClose}
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden"
+                />
+            )}
 
-            {/* Logo */}
-            <div className="px-5 py-6 border-b border-slate-700">
-                <h1 className="text-xl font-bold flex items-center gap-2">
-                    🍺 <span>Beer Shop ERP</span>
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                    {isAdmin ? "Admin Panel" : "Management System"}
-                </p>
-            </div>
+            <aside className={`fixed lg:static top-0 bottom-0 left-0 z-50 w-64 min-h-screen bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out ${
+                isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+            }`}>
+
+                {/* Logo + Mobile Close */}
+                <div className="px-5 py-5 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-bold flex items-center gap-2">
+                            🍺 <span>Beer Shop ERP</span>
+                        </h1>
+                        <p className="text-slate-400 text-xs mt-0.5">
+                            {isAdmin ? "Admin Panel" : "Management System"}
+                        </p>
+                    </div>
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -134,6 +158,16 @@ export default function Sidebar() {
 
             {/* User Profile + Logout */}
             <div className="px-4 py-4 border-t border-slate-700 space-y-3">
+                {isInstallable && (
+                    <button
+                        onClick={promptInstall}
+                        className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all shadow-md shadow-emerald-500/20"
+                    >
+                        <FaDownload />
+                        <span>Install Web App</span>
+                    </button>
+                )}
+
                 {user && (
                     <div className="flex items-center gap-3 px-2">
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${isAdmin ? "bg-purple-600" : "bg-blue-600"}`}>
@@ -159,5 +193,6 @@ export default function Sidebar() {
                 </button>
             </div>
         </aside>
+        </>
     );
 }
