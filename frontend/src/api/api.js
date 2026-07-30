@@ -1,7 +1,21 @@
 import axios from "axios";
 
-const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${API_HOST}:5000`;
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('onrender.com')) {
+      const backendHost = host.replace('frontend', 'backend');
+      return `https://${backendHost}`;
+    }
+    return `http://${host}:5000`;
+  }
+  return 'http://localhost:5000';
+};
+
+const API_BASE_URL = getBaseUrl();
 
 const api = axios.create({
     baseURL: API_BASE_URL,

@@ -25,3 +25,6 @@ services:
     dockerContext: ./frontend
     dockerfilePath: ./frontend/Dockerfile
     plan: free
+    envVars:
+      - key: VITE_API_URL
+        value: https://beer-shop-backend.onrender.com
