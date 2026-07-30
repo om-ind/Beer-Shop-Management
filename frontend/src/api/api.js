@@ -1,6 +1,10 @@
 import axios from "axios";
 
 const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const customUrl = localStorage.getItem("custom_api_url");
+    if (customUrl) return customUrl;
+  }
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
