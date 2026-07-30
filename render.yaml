@@ -18,9 +18,10 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-  # React Frontend PWA (Render Static Site - Free)
-  - type: static_site
+  # React Frontend PWA (Render Static Site)
+  - type: web
     name: beer-shop-frontend
+    env: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
     routes:
