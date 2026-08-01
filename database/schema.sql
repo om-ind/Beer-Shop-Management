@@ -1,4 +1,5 @@
 -- Complete Unified Database Schema for Beer Shop ERP
+SET SQL_SAFE_UPDATES = 0;
 
 CREATE TABLE IF NOT EXISTS shops (
     id          INT AUTO_INCREMENT PRIMARY KEY,
