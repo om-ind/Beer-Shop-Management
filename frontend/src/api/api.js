@@ -9,7 +9,7 @@ const getBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return 'https://beer-shop-backend-bhe0.onrender.com';
+    return 'https://beer-shop-management.onrender.com';
   }
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
