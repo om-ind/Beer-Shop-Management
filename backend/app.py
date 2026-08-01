@@ -22,7 +22,7 @@ from routes.import_data import import_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, origins=["https://beer-shop-management-coral.vercel.app", "http://localhost:5173","http://localhost:5000"])
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
 
 app.register_blueprint(inventory_bp)
 app.register_blueprint(sales_bp)
