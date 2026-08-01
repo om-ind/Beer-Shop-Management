@@ -18,6 +18,7 @@ def _get_pool():
             password=DB_PASSWORD,
             database=DB_NAME,
             buffered=True,
+            connection_timeout=5,
         )
     except Exception:
         # Pool with this name already exists or failed to create
@@ -44,4 +45,5 @@ def get_connection():
         password=DB_PASSWORD,
         database=DB_NAME,
         buffered=True,
+        connection_timeout=5,
     )
