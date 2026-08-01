@@ -22,7 +22,7 @@ from routes.import_data import import_bp
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "methods": "*"}})
 
 app.register_blueprint(inventory_bp)
 app.register_blueprint(sales_bp)
