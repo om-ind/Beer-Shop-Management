@@ -45,11 +45,28 @@ app.register_blueprint(excise_bp)
 app.register_blueprint(import_bp)
 
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    return response
+
 @app.route("/")
 def home():
     return {
         "Project": "Beer Shop Management"
     }
+
+@app.route("/health")
+def health():
+    try:
+        from database import get_connection
+        conn = get_connection()
+        conn.close()
+        return jsonify({"status": "ok", "database": "connected"})
+    except Exception as e:
+        return jsonify({"status": "error", "database_error": str(e)}), 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
