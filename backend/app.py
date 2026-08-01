@@ -77,5 +77,7 @@ def handle_exception(e):
     response.status_code = 500
     return response
 
+from config import HOST, PORT
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host=HOST, port=PORT)
