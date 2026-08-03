@@ -50,7 +50,7 @@ export default function PurchaseItems({ items, setItems }) {
                                     min="1"
                                     value={item.quantity}
                                     onChange={(e) => updateQty(index, e.target.value)}
-                                    className="border border-slate-200 rounded-lg w-20 p-1.5 text-center font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                                    className="border border-slate-300 rounded-lg w-20 p-1.5 text-center font-bold text-slate-900 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                 />
                             </td>
 
@@ -60,10 +60,10 @@ export default function PurchaseItems({ items, setItems }) {
                                     step="0.01"
                                     value={item.purchase_price}
                                     onChange={(e) => updatePrice(index, e.target.value)}
-                                    className="border border-slate-200 rounded-lg w-28 p-1.5 text-right font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                                    className="border border-slate-300 rounded-lg w-28 p-1.5 text-right font-bold text-slate-900 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                 />
                                 {item.transport_per_unit > 0 && (
-                                    <div className="text-[11px] text-orange-600 font-medium mt-0.5">
+                                    <div className="text-[11px] text-orange-600 font-bold mt-0.5">
                                         +₹{item.transport_per_unit.toFixed(2)} transport/unit
                                     </div>
                                 )}

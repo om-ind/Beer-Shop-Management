@@ -334,7 +334,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                                                 placeholder="e.g. 25"
                                                 value={transportPerCarton}
                                                 onChange={(e) => setTransportPerCarton(e.target.value)}
-                                                className="w-full pl-7 pr-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/30 shadow-sm"
+                                                className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                             />
                                         </div>
                                     </div>
