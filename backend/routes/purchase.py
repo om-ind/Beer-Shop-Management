@@ -25,35 +25,54 @@ def get_purchases():
     else:
         filter_shop = shop_id
 
-    fields = """
-        p.id,
-        p.invoice_number,
-        s.name AS supplier,
-        p.purchase_date,
-        p.total_amount,
-        p.payment_mode,
-        p.transport_per_carton,
-        p.total_cartons,
-        p.transport_total
-    """
+    where_clause = "WHERE p.shop_id = %s" if filter_shop else ""
+    params = (filter_shop,) if filter_shop else ()
 
-    if filter_shop:
+    try:
         cursor.execute(f"""
-            SELECT {fields}
+            SELECT
+                p.id,
+                COALESCE(p.invoice_number, p.invoice_no, CONCAT('PUR', p.id)) AS invoice_number,
+                s.name AS supplier,
+                p.purchase_date,
+                COALESCE(p.total_amount, p.total, 0) AS total_amount,
+                IFNULL(p.payment_mode, 'Cash') AS payment_mode,
+                IFNULL(p.transport_per_carton, 0) AS transport_per_carton,
+                IFNULL(p.total_cartons, 0) AS total_cartons,
+                IFNULL(p.transport_total, 0) AS transport_total
             FROM purchases p
             LEFT JOIN suppliers s ON p.supplier_id = s.id
-            WHERE p.shop_id = %s
+            {where_clause}
             ORDER BY p.id DESC
-        """, (filter_shop,))
-    else:
+        """, params)
+        purchases = cursor.fetchall()
+    except Exception:
         cursor.execute(f"""
-            SELECT {fields}
+            SELECT
+                p.id,
+                COALESCE(p.invoice_no, CONCAT('PUR', p.id)) AS invoice_number,
+                s.name AS supplier,
+                p.purchase_date,
+                p.total AS total_amount,
+                'Cash' AS payment_mode,
+                0 AS transport_per_carton,
+                0 AS total_cartons,
+                0 AS transport_total
             FROM purchases p
             LEFT JOIN suppliers s ON p.supplier_id = s.id
+            {where_clause}
             ORDER BY p.id DESC
-        """)
+        """, params)
+        purchases = cursor.fetchall()
 
-    purchases = cursor.fetchall()
+    for row in purchases:
+        if row.get("purchase_date"):
+            row["purchase_date"] = str(row["purchase_date"])
+        row["total_amount"] = float(row.get("total_amount") or 0)
+        row["transport_per_carton"] = float(row.get("transport_per_carton") or 0)
+        row["total_cartons"] = float(row.get("total_cartons") or 0)
+        row["transport_total"] = float(row.get("transport_total") or 0)
+
     cursor.close()
     conn.close()
 

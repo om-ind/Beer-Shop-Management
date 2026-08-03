@@ -26,7 +26,7 @@ def _shop_clause_products():
     else:
         filter_shop = shop_id
     if filter_shop:
-        return "WHERE p.shop_id = %s", (filter_shop,)
+        return "WHERE shop_id = %s", (filter_shop,)
     return "", ()
 
 

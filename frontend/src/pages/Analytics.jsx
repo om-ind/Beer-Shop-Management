@@ -37,7 +37,7 @@ export default function Analytics() {
     async function loadAll() {
         setLoading(true);
         try {
-            const [bp, tp, rs, st, best, worst] = await Promise.all([
+            const results = await Promise.allSettled([
                 getBrandProfit(),
                 getTopSellingProducts(),
                 getRestockAlerts(),
@@ -45,12 +45,14 @@ export default function Analytics() {
                 getHighestProfitBrand(),
                 getLowestProfitBrand(),
             ]);
-            setBrandProfit(bp);
-            setTopProducts(tp);
-            setRestock(rs);
-            setSalesTrend(st.map(d => ({ ...d, date: d.date?.slice(5) })));
-            setBestBrand(best);
-            setWorstBrand(worst);
+            if (results[0].status === "fulfilled" && Array.isArray(results[0].value)) setBrandProfit(results[0].value);
+            if (results[1].status === "fulfilled" && Array.isArray(results[1].value)) setTopProducts(results[1].value);
+            if (results[2].status === "fulfilled" && Array.isArray(results[2].value)) setRestock(results[2].value);
+            if (results[3].status === "fulfilled" && Array.isArray(results[3].value)) {
+                setSalesTrend(results[3].value.map(d => ({ ...d, date: d.date?.slice(5) })));
+            }
+            if (results[4].status === "fulfilled" && results[4].value) setBestBrand(results[4].value);
+            if (results[5].status === "fulfilled" && results[5].value) setWorstBrand(results[5].value);
         } catch (err) {
             console.error("Analytics error:", err);
         } finally {

@@ -64,20 +64,23 @@ export default function Reports() {
     }, []);
 
     async function loadReport() {
+        setLoading(true);
         try {
-            setLoading(true);
-            const [dashboard, trendData, top, low, profitData] = await Promise.all([
+            const results = await Promise.allSettled([
                 getDashboardReport(),
                 getSalesTrend(),
                 getTopProducts(),
                 getLowStockProducts(),
                 getProfitSummary(),
             ]);
-            setReport(dashboard);
-            setTrend(trendData.map(d => ({ ...d, day: d.day?.slice(5) })));
-            setTopProducts(top);
-            setLowStock(low);
-            setProfit(profitData);
+
+            if (results[0].status === "fulfilled" && results[0].value) setReport(results[0].value);
+            if (results[1].status === "fulfilled" && Array.isArray(results[1].value)) {
+                setTrend(results[1].value.map(d => ({ ...d, day: d.day?.slice(5) })));
+            }
+            if (results[2].status === "fulfilled" && Array.isArray(results[2].value)) setTopProducts(results[2].value);
+            if (results[3].status === "fulfilled" && Array.isArray(results[3].value)) setLowStock(results[3].value);
+            if (results[4].status === "fulfilled" && results[4].value) setProfit(results[4].value);
         } catch (err) {
             console.error(err);
         } finally {

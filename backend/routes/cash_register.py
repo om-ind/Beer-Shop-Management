@@ -134,20 +134,29 @@ def get_entries():
         """, params)
         total = cursor.fetchone()["total"]
 
-        cursor.execute(f"""
-            SELECT id, entry_type, category, amount, description, entry_date, created_at, supplier_bill_id
-            FROM cash_register
-            {where}
-            ORDER BY entry_date DESC, created_at DESC
-            LIMIT %s OFFSET %s
-        """, params + [per_page, offset])
-
-        entries = cursor.fetchall()
+        try:
+            cursor.execute(f"""
+                SELECT id, entry_type, category, amount, description, entry_date, created_at, supplier_bill_id
+                FROM cash_register
+                {where}
+                ORDER BY entry_date DESC, created_at DESC
+                LIMIT %s OFFSET %s
+            """, params + [per_page, offset])
+            entries = cursor.fetchall()
+        except Exception:
+            cursor.execute(f"""
+                SELECT id, entry_type, category, amount, description, entry_date, created_at, NULL AS supplier_bill_id
+                FROM cash_register
+                {where}
+                ORDER BY entry_date DESC, created_at DESC
+                LIMIT %s OFFSET %s
+            """, params + [per_page, offset])
+            entries = cursor.fetchall()
 
         for e in entries:
-            e["amount"] = float(e["amount"])
-            e["entry_date"] = str(e["entry_date"])
-            e["created_at"] = str(e["created_at"])
+            e["amount"] = float(e["amount"] or 0)
+            e["entry_date"] = str(e["entry_date"]) if e.get("entry_date") else ""
+            e["created_at"] = str(e["created_at"]) if e.get("created_at") else ""
             e["supplier_bill_id"] = e.get("supplier_bill_id")
 
         return jsonify({
