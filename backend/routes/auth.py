@@ -28,7 +28,7 @@ def login():
 
         cursor.execute(
             """
-            SELECT u.id, u.username, u.password, u.role, u.full_name, u.shop_id, u.is_active, s.name AS shop_name
+            SELECT u.id, u.username, u.password, u.role, u.full_name, u.shop_id, u.is_active, s.name AS shop_name, s.is_active AS shop_is_active
             FROM users u
             LEFT JOIN shops s ON u.shop_id = s.id
             WHERE u.username=%s
@@ -57,6 +57,12 @@ def login():
         return jsonify({
             "success": False,
             "message": "Account is deactivated. Please contact Admin."
+        }), 403
+
+    if user.get("role") != "Admin" and user.get("shop_id") is not None and user.get("shop_is_active") == 0:
+        return jsonify({
+            "success": False,
+            "message": "This shop has been deactivated. Please contact Admin."
         }), 403
 
     password_db = user["password"]

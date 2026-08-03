@@ -3,6 +3,9 @@ from flask import request, jsonify, g
 from utils.jwt_helper import verify_token
 
 
+from database import get_connection
+
+
 def _get_payload():
     """Extract and verify JWT from Authorization header. Returns payload or None."""
     auth_header = request.headers.get("Authorization")
@@ -34,6 +37,40 @@ def token_required(f):
                 "success": False,
                 "message": "Session expired after system upgrade. Please log in again."
             }), 401
+
+        # Check account and shop active status for non-Admin users
+        if payload.get("role") != "Admin":
+            user_id = payload.get("id")
+            if user_id:
+                try:
+                    conn = get_connection()
+                    cursor = conn.cursor(dictionary=True)
+                    cursor.execute(
+                        """
+                        SELECT u.is_active AS user_active, s.is_active AS shop_active
+                        FROM users u
+                        LEFT JOIN shops s ON u.shop_id = s.id
+                        WHERE u.id = %s
+                        """,
+                        (user_id,)
+                    )
+                    st = cursor.fetchone()
+                    cursor.close()
+                    conn.close()
+
+                    if not st or st.get("user_active") == 0:
+                        return jsonify({
+                            "success": False,
+                            "message": "Account is deactivated. Access denied."
+                        }), 403
+
+                    if payload.get("shop_id") is not None and st.get("shop_active") == 0:
+                        return jsonify({
+                            "success": False,
+                            "message": "This shop has been deactivated. Access denied."
+                        }), 403
+                except Exception as e:
+                    print("Auth middleware status check error:", e)
 
         g.user = payload
         return f(*args, **kwargs)
