@@ -80,8 +80,8 @@ function App() {
                 {/* Data Import — Owner only */}
                 <Route path="/import" element={<RequireAuth roles={["Owner"]}><ImportData /></RequireAuth>} />
 
-                {/* Owner only */}
-                <Route path="/users" element={<RequireAuth roles={["Owner"]}><Users /></RequireAuth>} />
+                {/* Owner & Admin */}
+                <Route path="/users" element={<RequireAuth roles={["Owner", "Admin"]}><Users /></RequireAuth>} />
 
                 {/* Admin only */}
                 <Route path="/admin/dashboard" element={<RequireAuth roles={["Admin"]}><AdminDashboard /></RequireAuth>} />
