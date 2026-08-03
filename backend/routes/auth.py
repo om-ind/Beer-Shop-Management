@@ -28,9 +28,10 @@ def login():
 
         cursor.execute(
             """
-            SELECT id, username, password, role, full_name, shop_id, is_active
-            FROM users
-            WHERE username=%s
+            SELECT u.id, u.username, u.password, u.role, u.full_name, u.shop_id, u.is_active, s.name AS shop_name
+            FROM users u
+            LEFT JOIN shops s ON u.shop_id = s.id
+            WHERE u.username=%s
             """,
             (username,)
         )
@@ -89,6 +90,10 @@ def login():
 
     token = generate_token(user)
 
+    shop_name = user.get("shop_name")
+    if not shop_name:
+        shop_name = "Admin System" if user["role"] == "Admin" else "Beer Shop ERP"
+
     return jsonify({
         "success": True,
         "token": token,
@@ -97,7 +102,8 @@ def login():
             "username": user["username"],
             "role": user["role"],
             "full_name": user.get("full_name", ""),
-            "shop_id": user.get("shop_id")     # None for Admin
+            "shop_id": user.get("shop_id"),
+            "shop_name": shop_name
         }
     })
 

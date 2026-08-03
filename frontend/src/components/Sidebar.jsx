@@ -101,11 +101,11 @@ export default function Sidebar({ isOpen, onClose }) {
                             🍺
                         </div>
                         <div>
-                            <h1 className="font-display text-lg font-bold text-white tracking-tight">
-                                Beer Shop ERP
+                            <h1 className="font-display text-base font-bold text-white tracking-tight truncate max-w-[150px]" title={user?.shop_name || "Beer Shop ERP"}>
+                                {user?.shop_name || "Beer Shop ERP"}
                             </h1>
                             <p className="text-slate-400 text-xs font-medium">
-                                {isAdmin ? "Admin Console" : "Smart Management"}
+                                {isAdmin ? "Admin Console" : "Beer Shop Management"}
                             </p>
                         </div>
                     </div>

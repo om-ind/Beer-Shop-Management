@@ -10,6 +10,7 @@ def generate_token(user):
         "username": user["username"],
         "role": user["role"],
         "shop_id": user.get("shop_id"),          # None for Admin
+        "shop_name": user.get("shop_name", ""),
         "full_name": user.get("full_name", ""),
         "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
     }

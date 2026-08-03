@@ -21,9 +21,19 @@ export default function Navbar({ onOpenSidebar, lowStockCount = 0 }) {
             </Button>
 
             {/* Title / Brand Tag on mobile */}
-            <div className="flex items-center gap-2 lg:hidden font-display font-bold text-lg text-slate-900 dark:text-slate-100">
+            <div className="flex items-center gap-2 lg:hidden font-display font-bold text-base text-slate-900 dark:text-slate-100">
                 <span>🍺</span>
-                <span>Beer Shop ERP</span>
+                <span className="truncate max-w-[180px]" title={user?.shop_name || "Beer Shop ERP"}>
+                    {user?.shop_name || "Beer Shop ERP"}
+                </span>
+            </div>
+
+            {/* Shop Name Display for desktop header */}
+            <div className="hidden lg:flex items-center gap-2 font-display font-bold text-base text-slate-900 dark:text-slate-100 shrink-0">
+                <Store className="h-4 w-4 text-amber-500" />
+                <span className="truncate max-w-[220px]" title={user?.shop_name || "Beer Shop ERP"}>
+                    {user?.shop_name || "Beer Shop ERP"}
+                </span>
             </div>
 
             {/* Quick Search Bar for larger screens */}
