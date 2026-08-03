@@ -24,25 +24,28 @@ def get_users():
             filter_shop = request.args.get("shop_id", type=int)
             if filter_shop:
                 cursor.execute("""
-                    SELECT id, full_name, username, role, shop_id, is_active, created_at
-                    FROM users
-                    WHERE shop_id = %s AND role != 'Admin'
-                    ORDER BY id DESC
+                    SELECT u.id, u.full_name, u.username, u.role, u.shop_id, u.is_active, u.created_at, s.name AS shop_name
+                    FROM users u
+                    LEFT JOIN shops s ON u.shop_id = s.id
+                    WHERE u.shop_id = %s AND u.role != 'Admin'
+                    ORDER BY u.id DESC
                 """, (filter_shop,))
             else:
                 cursor.execute("""
-                    SELECT id, full_name, username, role, shop_id, is_active, created_at
-                    FROM users
-                    WHERE role != 'Admin'
-                    ORDER BY id DESC
+                    SELECT u.id, u.full_name, u.username, u.role, u.shop_id, u.is_active, u.created_at, s.name AS shop_name
+                    FROM users u
+                    LEFT JOIN shops s ON u.shop_id = s.id
+                    WHERE u.role != 'Admin'
+                    ORDER BY u.id DESC
                 """)
         else:
             # Owner/Manager/Cashier: only their shop
             cursor.execute("""
-                SELECT id, full_name, username, role, shop_id, is_active, created_at
-                FROM users
-                WHERE shop_id = %s AND role != 'Admin'
-                ORDER BY id DESC
+                SELECT u.id, u.full_name, u.username, u.role, u.shop_id, u.is_active, u.created_at, s.name AS shop_name
+                FROM users u
+                LEFT JOIN shops s ON u.shop_id = s.id
+                WHERE u.shop_id = %s AND u.role != 'Admin'
+                ORDER BY u.id DESC
             """, (shop_id,))
 
         users = cursor.fetchall()

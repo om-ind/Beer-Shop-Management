@@ -53,6 +53,7 @@ const SHOP_MENU = [
 const ADMIN_MENU = [
     { icon: LayoutDashboard, label: "Admin Dashboard", path: "/admin/dashboard" },
     { icon: Building2, label: "All Shops", path: "/admin/shops" },
+    { icon: Shield, label: "All Users", path: "/users" },
     { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
