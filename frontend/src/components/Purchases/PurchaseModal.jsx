@@ -277,11 +277,11 @@ export default function PurchaseModal({ onClose, onSave }) {
                                     name="supplier_id"
                                     value={purchase.supplier_id}
                                     onChange={handleChange}
-                                    className="border border-slate-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition"
+                                    className="border border-slate-300 rounded-xl p-3 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                 >
-                                    <option value="">Select Supplier</option>
+                                    <option value="" className="bg-white text-slate-900 font-medium">Select Supplier</option>
                                     {suppliers.map((supplier) => (
-                                        <option key={supplier.id} value={supplier.id}>
+                                        <option key={supplier.id} value={supplier.id} className="bg-white text-slate-900 font-medium">
                                             {supplier.name}
                                         </option>
                                     ))}
@@ -291,12 +291,12 @@ export default function PurchaseModal({ onClose, onSave }) {
                                     name="payment_mode"
                                     value={purchase.payment_mode}
                                     onChange={handleChange}
-                                    className="border border-slate-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition"
+                                    className="border border-slate-300 rounded-xl p-3 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                 >
-                                    <option>Cash</option>
-                                    <option>Card</option>
-                                    <option>UPI</option>
-                                    <option>Credit</option>
+                                    <option className="bg-white text-slate-900 font-medium">Cash</option>
+                                    <option className="bg-white text-slate-900 font-medium">Card</option>
+                                    <option className="bg-white text-slate-900 font-medium">UPI</option>
+                                    <option className="bg-white text-slate-900 font-medium">Credit</option>
                                 </select>
                             </div>
 
@@ -305,7 +305,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                                 placeholder="Remarks"
                                 value={purchase.remarks}
                                 onChange={handleChange}
-                                className="border border-slate-200 rounded-xl w-full p-3 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition"
+                                className="border border-slate-300 rounded-xl w-full p-3 bg-white text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                             />
 
                             {/* Transport Charge Section */}
@@ -365,7 +365,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                                 placeholder="Search Product to add..."
                                 value={keyword}
                                 onChange={handleSearch}
-                                className="border border-slate-200 rounded-xl w-full p-3 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition"
+                                className="border border-slate-300 rounded-xl w-full p-3 bg-white text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                             />
 
                             {products.length > 0 && (
