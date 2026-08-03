@@ -1,257 +1,18 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import {
-    getUsers,
-    createUser,
-    updateUser,
-    deleteUser,
-    resetUserPassword,
-} from "../services/userService";
+import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from "../services/userService";
 import { useAuth } from "../context/AuthContext";
-import {
-    FaUserPlus,
-    FaTrash,
-    FaToggleOn,
-    FaToggleOff,
-    FaKey,
-    FaTimes,
-    FaCheck,
-    FaUserShield,
-    FaEdit,
-} from "react-icons/fa";
+import { Shield, UserPlus, Edit3, Trash2, Key, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-
-const ROLE_COLORS = {
-    Owner:   "bg-yellow-100 text-yellow-800 border border-yellow-300",
-    Manager: "bg-blue-100 text-blue-800 border border-blue-300",
-    Cashier: "bg-green-100 text-green-800 border border-green-300",
-};
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
+import { Dialog } from "../components/ui/dialog";
 
 const ROLE_OPTIONS = ["Owner", "Manager", "Cashier"];
 
-// ─────────────────────────────────
-// Add / Edit User Modal
-// ─────────────────────────────────
-function UserModal({ onClose, onSaved, editUser = null }) {
-    const [form, setForm] = useState({
-        full_name: editUser?.full_name || "",
-        username:  editUser?.username  || "",
-        password:  "",
-        role:      editUser?.role      || "Cashier",
-    });
-    const [saving, setSaving] = useState(false);
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        if (!editUser && form.password.length < 6) {
-            toast.error("Password must be at least 6 characters");
-            return;
-        }
-        setSaving(true);
-        try {
-            if (editUser) {
-                const payload = { full_name: form.full_name, role: form.role };
-                const res = await updateUser(editUser.id, payload);
-                if (res.success) {
-                    toast.success("User updated");
-                    onSaved();
-                    onClose();
-                } else {
-                    toast.error(res.message || "Failed to update");
-                }
-            } else {
-                const res = await createUser(form);
-                if (res.success) {
-                    toast.success("User created successfully!");
-                    onSaved();
-                    onClose();
-                } else {
-                    toast.error(res.message || "Failed to create user");
-                }
-            }
-        } catch (err) {
-            toast.error(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                "Something went wrong"
-            );
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    const inputCls = "w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800";
-    const labelCls = "block text-sm font-medium text-gray-700 mb-1";
-
-    return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        {editUser ? <FaEdit /> : <FaUserPlus />}
-                        {editUser ? "Edit User" : "Add New User"}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
-                        <FaTimes size={18} />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className={labelCls}>Full Name *</label>
-                        <input
-                            type="text"
-                            required
-                            value={form.full_name}
-                            onChange={e => setForm({ ...form, full_name: e.target.value })}
-                            className={inputCls}
-                            placeholder="e.g. Bipin Patel"
-                        />
-                    </div>
-
-                    {!editUser && (
-                        <div>
-                            <label className={labelCls}>Username *</label>
-                            <input
-                                type="text"
-                                required
-                                value={form.username}
-                                onChange={e => setForm({ ...form, username: e.target.value })}
-                                className={inputCls}
-                                placeholder="e.g. bipin123"
-                            />
-                        </div>
-                    )}
-
-                    {!editUser && (
-                        <div>
-                            <label className={labelCls}>Password * (min 6 chars)</label>
-                            <input
-                                type="password"
-                                required
-                                minLength={6}
-                                value={form.password}
-                                onChange={e => setForm({ ...form, password: e.target.value })}
-                                className={inputCls}
-                                placeholder="Minimum 6 characters"
-                            />
-                        </div>
-                    )}
-
-                    <div>
-                        <label className={labelCls}>Role</label>
-                        <select
-                            value={form.role}
-                            onChange={e => setForm({ ...form, role: e.target.value })}
-                            className={inputCls}
-                        >
-                            {ROLE_OPTIONS.map(r => (
-                                <option key={r} value={r}>{r}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex gap-3 pt-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-2.5 rounded-xl font-semibold transition"
-                        >
-                            {saving ? "Saving…" : editUser ? "Save Changes" : "Create User"}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────
-// Reset Password Modal
-// ─────────────────────────────────
-function ResetPasswordModal({ user, onClose }) {
-    const [newPass, setNewPass] = useState("");
-    const [saving, setSaving] = useState(false);
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        if (newPass.length < 6) {
-            toast.error("Password must be at least 6 characters");
-            return;
-        }
-        setSaving(true);
-        try {
-            const res = await resetUserPassword(user.id, newPass);
-            if (res.success) {
-                toast.success("Password reset successfully!");
-                onClose();
-            } else {
-                toast.error(res.message || "Failed to reset password");
-            }
-        } catch {
-            toast.error("Something went wrong");
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-bold text-gray-800">Reset Password</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
-                        <FaTimes size={18} />
-                    </button>
-                </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <p className="text-sm text-gray-500">
-                        Resetting password for <strong>@{user.username}</strong>
-                    </p>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                        <input
-                            type="password"
-                            required
-                            minLength={6}
-                            value={newPass}
-                            onChange={e => setNewPass(e.target.value)}
-                            className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Min 6 characters"
-                        />
-                    </div>
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-2.5 rounded-xl font-semibold transition"
-                        >
-                            {saving ? "Resetting…" : "Reset"}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────
-// Main Users Page
-// ─────────────────────────────────
 export default function Users() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
@@ -260,26 +21,97 @@ export default function Users() {
     const [editTarget, setEditTarget] = useState(null);
     const [resetTarget, setResetTarget] = useState(null);
 
+    const [form, setForm] = useState({
+        full_name: "",
+        username: "",
+        password: "",
+        role: "Cashier",
+    });
+    const [newPass, setNewPass] = useState("");
+    const [saving, setSaving] = useState(false);
+
     useEffect(() => { loadUsers(); }, []);
 
     async function loadUsers() {
         try {
             setLoading(true);
             const data = await getUsers();
-            // data should be an array; handle both array and {error}
             if (Array.isArray(data)) {
                 setUsers(data);
             } else {
                 toast.error(data?.message || "Failed to load users");
             }
-        } catch (err) {
-            toast.error(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                "Failed to load users"
-            );
+        } catch {
+            toast.error("Failed to load users");
         } finally {
             setLoading(false);
+        }
+    }
+
+    function handleOpenCreate() {
+        setForm({ full_name: "", username: "", password: "", role: "Cashier" });
+        setShowAddModal(true);
+    }
+
+    function handleOpenEdit(user) {
+        setEditTarget(user);
+        setForm({ full_name: user.full_name || "", username: user.username || "", password: "", role: user.role || "Cashier" });
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        if (!editTarget && form.password.length < 6) {
+            toast.error("Password must be at least 6 characters");
+            return;
+        }
+        setSaving(true);
+        try {
+            if (editTarget) {
+                const res = await updateUser(editTarget.id, { full_name: form.full_name, role: form.role });
+                if (res.success) {
+                    toast.success("User updated");
+                    setEditTarget(null);
+                    loadUsers();
+                } else {
+                    toast.error(res.message || "Failed to update");
+                }
+            } else {
+                const res = await createUser(form);
+                if (res.success) {
+                    toast.success("User created successfully!");
+                    setShowAddModal(false);
+                    loadUsers();
+                } else {
+                    toast.error(res.message || "Failed to create user");
+                }
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Something went wrong");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleResetPassword(e) {
+        e.preventDefault();
+        if (newPass.length < 6) {
+            toast.error("Password must be at least 6 characters");
+            return;
+        }
+        setSaving(true);
+        try {
+            const res = await resetUserPassword(resetTarget.id, newPass);
+            if (res.success) {
+                toast.success("Password reset successfully!");
+                setResetTarget(null);
+                setNewPass("");
+            } else {
+                toast.error(res.message || "Failed to reset password");
+            }
+        } catch {
+            toast.error("Something went wrong");
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -298,7 +130,7 @@ export default function Users() {
     }
 
     async function handleDelete(user) {
-        if (!window.confirm(`Delete user "@${user.username}"? This cannot be undone.`)) return;
+        if (!window.confirm(`Delete user "@${user.username}"?`)) return;
         try {
             const res = await deleteUser(user.id);
             if (res.success) {
@@ -307,175 +139,211 @@ export default function Users() {
             } else {
                 toast.error(res.message || "Failed to delete user");
             }
-        } catch (err) {
-            toast.error(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                "Failed to delete user"
-            );
+        } catch {
+            toast.error("Failed to delete user");
         }
     }
 
     return (
         <AdminLayout>
-            <div className="p-2">
-
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                            <FaUserShield className="text-blue-600" /> User Management
-                        </h1>
-                        <p className="text-gray-500 mt-1">
-                            Manage users for your shop
-                            {currentUser?.shop_id && (
-                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                                    Shop #{currentUser.shop_id}
-                                </span>
-                            )}
-                        </p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <Shield className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                User Control & Roles
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                                Manage staff credentials, permissions, and status
+                            </p>
+                        </div>
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold transition shadow"
-                    >
-                        <FaUserPlus /> Add User
-                    </button>
+
+                    <Button variant="gradient" onClick={handleOpenCreate} className="text-slate-950 font-bold">
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        <span>Add New Staff</span>
+                    </Button>
                 </div>
 
-                {/* Users Table */}
-                <div className="bg-white rounded-2xl shadow overflow-hidden">
-                    {loading ? (
-                        <div className="p-10 text-center text-gray-400">Loading users…</div>
-                    ) : (
-                        <table className="w-full">
-                            <thead className="bg-slate-900 text-white">
-                                <tr>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">#</th>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">Name</th>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">Username</th>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">Role</th>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">Status</th>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">Created</th>
-                                    <th className="py-4 px-6 text-left text-sm font-semibold">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {users.map((user, i) => (
-                                    <tr key={user.id} className="hover:bg-gray-50 transition">
-                                        <td className="py-4 px-6 text-gray-500 text-sm">{i + 1}</td>
-                                        <td className="py-4 px-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                                                    {(user.full_name || user.username)?.charAt(0)?.toUpperCase()}
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                                <p className="text-sm font-medium">Fetching registered users...</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>#</TableHead>
+                                        <TableHead>Full Name</TableHead>
+                                        <TableHead>Username</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-center">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {users.map((user, i) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell className="text-slate-400 text-xs">{i + 1}</TableCell>
+                                            <TableCell className="font-bold text-slate-900 dark:text-slate-100">
+                                                {user.full_name || "—"}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs text-slate-500">
+                                                @{user.username}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="text-xs">
+                                                    {user.role}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {user.is_active ? (
+                                                    <Badge variant="success" className="gap-1 text-[11px]">
+                                                        <CheckCircle2 className="h-3 w-3" /> Active
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="destructive" className="gap-1 text-[11px]">
+                                                        <XCircle className="h-3 w-3" /> Inactive
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleOpenEdit(user)}
+                                                        className="h-8 w-8 text-amber-600 hover:bg-amber-500/10"
+                                                        title="Edit User"
+                                                    >
+                                                        <Edit3 className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setResetTarget(user)}
+                                                        className="h-8 w-8 text-purple-600 hover:bg-purple-500/10"
+                                                        title="Reset Password"
+                                                    >
+                                                        <Key className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(user)}
+                                                        className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                                        title="Delete User"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
-                                                <span className="font-semibold text-gray-800">
-                                                    {user.full_name || "—"}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-6 text-gray-600 font-mono text-sm">
-                                            @{user.username}
-                                        </td>
-                                        <td className="py-4 px-6">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[user.role] || "bg-gray-100 text-gray-700 border border-gray-300"}`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="py-4 px-6">
-                                            {user.is_active ? (
-                                                <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-                                                    <FaCheck size={12} /> Active
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5 text-red-500 text-sm font-medium">
-                                                    <FaTimes size={12} /> Inactive
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="py-4 px-6 text-gray-500 text-sm">
-                                            {user.created_at
-                                                ? new Date(user.created_at).toLocaleDateString("en-IN")
-                                                : "—"}
-                                        </td>
-                                        <td className="py-4 px-6">
-                                            <div className="flex items-center gap-2">
-                                                {/* Edit */}
-                                                <button
-                                                    onClick={() => setEditTarget(user)}
-                                                    title="Edit User"
-                                                    className="p-2 rounded-lg text-blue-500 hover:bg-blue-50 transition"
-                                                >
-                                                    <FaEdit size={14} />
-                                                </button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
 
-                                                {/* Toggle Active */}
-                                                <button
-                                                    onClick={() => handleToggleActive(user)}
-                                                    title={user.is_active ? "Deactivate" : "Activate"}
-                                                    className={`p-2 rounded-lg transition ${user.is_active
-                                                        ? "text-green-600 hover:bg-green-50"
-                                                        : "text-gray-400 hover:bg-gray-100"}`}
-                                                >
-                                                    {user.is_active ? <FaToggleOn size={20} /> : <FaToggleOff size={20} />}
-                                                </button>
+                {/* Add / Edit Dialog */}
+                <Dialog
+                    isOpen={showAddModal || !!editTarget}
+                    onClose={() => { setShowAddModal(false); setEditTarget(null); }}
+                    title={editTarget ? "Edit User Permissions" : "Add New Staff Member"}
+                >
+                    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name</label>
+                            <Input
+                                type="text" required
+                                placeholder="e.g. Ramesh Patel"
+                                value={form.full_name}
+                                onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+                            />
+                        </div>
 
-                                                {/* Reset Password */}
-                                                <button
-                                                    onClick={() => setResetTarget(user)}
-                                                    title="Reset Password"
-                                                    className="p-2 rounded-lg text-amber-500 hover:bg-amber-50 transition"
-                                                >
-                                                    <FaKey size={15} />
-                                                </button>
+                        {!editTarget && (
+                            <>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Username</label>
+                                    <Input
+                                        type="text" required
+                                        placeholder="e.g. ramesh_cashier"
+                                        value={form.username}
+                                        onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                                    />
+                                </div>
 
-                                                {/* Delete */}
-                                                <button
-                                                    onClick={() => handleDelete(user)}
-                                                    title="Delete User"
-                                                    className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition"
-                                                >
-                                                    <FaTrash size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Password</label>
+                                    <Input
+                                        type="password" required minLength={6}
+                                        placeholder="Minimum 6 characters"
+                                        value={form.password}
+                                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Role</label>
+                            <select
+                                value={form.role}
+                                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                                className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
+                            >
+                                {ROLE_OPTIONS.map(r => (
+                                    <option key={r} value={r}>{r}</option>
                                 ))}
-                                {users.length === 0 && (
-                                    <tr>
-                                        <td colSpan={7} className="py-12 text-center text-gray-400">
-                                            No users found. Click "Add User" to create one.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-            </div>
+                            </select>
+                        </div>
 
-            {/* Add/Edit Modal */}
-            {showAddModal && (
-                <UserModal
-                    onClose={() => setShowAddModal(false)}
-                    onSaved={loadUsers}
-                />
-            )}
-            {editTarget && (
-                <UserModal
-                    editUser={editTarget}
-                    onClose={() => setEditTarget(null)}
-                    onSaved={loadUsers}
-                />
-            )}
+                        <div className="flex gap-3 justify-end pt-3">
+                            <Button type="button" variant="outline" onClick={() => { setShowAddModal(false); setEditTarget(null); }}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" variant="gradient" disabled={saving} className="text-slate-950 font-bold">
+                                {saving ? "Saving..." : editTarget ? "Update User" : "Create User"}
+                            </Button>
+                        </div>
+                    </form>
+                </Dialog>
 
-            {/* Reset Password Modal */}
-            {resetTarget && (
-                <ResetPasswordModal
-                    user={resetTarget}
+                {/* Reset Password Dialog */}
+                <Dialog
+                    isOpen={!!resetTarget}
                     onClose={() => setResetTarget(null)}
-                />
-            )}
+                    title={`Reset Password — @${resetTarget?.username}`}
+                >
+                    <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">New Password</label>
+                            <Input
+                                type="password" required minLength={6}
+                                placeholder="Enter new password"
+                                value={newPass}
+                                onChange={e => setNewPass(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-3 justify-end pt-3">
+                            <Button type="button" variant="outline" onClick={() => setResetTarget(null)}>Cancel</Button>
+                            <Button type="submit" variant="gradient" disabled={saving} className="text-slate-950 font-bold">
+                                {saving ? "Resetting..." : "Confirm Reset"}
+                            </Button>
+                        </div>
+                    </form>
+                </Dialog>
+            </div>
         </AdminLayout>
     );
 }

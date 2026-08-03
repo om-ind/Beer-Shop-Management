@@ -1,43 +1,13 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
 import { getLowStockProducts } from "../services/lowStockService";
 import { useNavigate } from "react-router-dom";
-import {
-    FaExclamationTriangle,
-    FaBoxOpen,
-    FaCheckCircle,
-    FaTruck,
-    FaSearch,
-    FaSyncAlt,
-} from "react-icons/fa";
-
-const SEVERITY = (stock, min) => {
-    if (stock === 0) return "critical";
-    if (stock <= Math.ceil(min * 0.5)) return "high";
-    return "low";
-};
-
-const SEVERITY_CONFIG = {
-    critical: {
-        label: "Out of Stock",
-        badge: "bg-red-100 text-red-700 border border-red-200",
-        row: "bg-red-50/40",
-        dot: "bg-red-500",
-    },
-    high: {
-        label: "Critical",
-        badge: "bg-orange-100 text-orange-700 border border-orange-200",
-        row: "bg-orange-50/30",
-        dot: "bg-orange-500",
-    },
-    low: {
-        label: "Low Stock",
-        badge: "bg-amber-100 text-amber-700 border border-amber-200",
-        row: "",
-        dot: "bg-amber-400",
-    },
-};
+import { AlertTriangle, CheckCircle2, Truck, Search, RefreshCw, Loader2, PackageX } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
 
 export default function LowStock() {
     const [products, setProducts] = useState([]);
@@ -78,195 +48,155 @@ export default function LowStock() {
     }
 
     const critical = products.filter((p) => p.stock === 0).length;
-    const high = products.filter(
-        (p) => p.stock > 0 && p.stock <= Math.ceil(p.minimum_stock * 0.5)
-    ).length;
+    const high = products.filter((p) => p.stock > 0 && p.stock <= Math.ceil(p.minimum_stock * 0.5)).length;
     const low = products.length - critical - high;
 
     return (
         <AdminLayout>
-            <Navbar />
-
-            <div className="space-y-6 p-2">
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                            <span className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-500/30">
-                                <FaExclamationTriangle size={18} />
-                            </span>
-                            Low Stock Alerts
-                        </h1>
-                        <p className="text-gray-500 mt-1 ml-[52px]">
-                            Products that need restocking
-                        </p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400">
+                            <AlertTriangle className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Low Stock Center
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                                Automated stock warnings and replenishment alerts
+                            </p>
+                        </div>
                     </div>
-                    <button
-                        onClick={load}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition text-sm font-medium"
-                    >
-                        <FaSyncAlt className={loading ? "animate-spin" : ""} />
-                        Refresh
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={load} className="rounded-xl">
+                            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                            <span>Refresh</span>
+                        </Button>
+                        <Button variant="gradient" onClick={() => navigate("/purchases")} className="text-slate-950 font-bold">
+                            <Truck className="h-4 w-4 mr-2" />
+                            <span>Create PO</span>
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Summary Cards */}
+                {/* Metric Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-5 text-white shadow-lg shadow-red-500/20 relative overflow-hidden">
-                        <div className="absolute -right-4 -bottom-4 opacity-10 text-8xl">
-                            <FaBoxOpen />
-                        </div>
-                        <p className="text-white/80 text-sm font-medium mb-1">Out of Stock</p>
-                        <p className="text-4xl font-bold">{critical}</p>
-                        <p className="text-white/70 text-xs mt-1">Need immediate restock</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
-                        <div className="absolute -right-4 -bottom-4 opacity-10 text-8xl">
-                            <FaExclamationTriangle />
-                        </div>
-                        <p className="text-white/80 text-sm font-medium mb-1">Critical Low</p>
-                        <p className="text-4xl font-bold">{high}</p>
-                        <p className="text-white/70 text-xs mt-1">Below 50% of minimum</p>
-                    </div>
-                    <div
-                        className={`rounded-2xl p-5 text-white shadow-lg relative overflow-hidden ${
-                            products.length === 0
-                                ? "bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-500/20"
-                                : "bg-gradient-to-br from-amber-400 to-yellow-500 shadow-amber-500/20"
-                        }`}
-                    >
-                        <div className="absolute -right-4 -bottom-4 opacity-10 text-8xl">
-                            {products.length === 0 ? <FaCheckCircle /> : <FaExclamationTriangle />}
-                        </div>
-                        <p className="text-white/80 text-sm font-medium mb-1">
-                            {products.length === 0 ? "All Stock Healthy" : "Below Minimum"}
-                        </p>
-                        <p className="text-4xl font-bold">{products.length === 0 ? "✓" : low}</p>
-                        <p className="text-white/70 text-xs mt-1">
-                            {products.length === 0
-                                ? "No alerts right now"
-                                : "Approaching minimum stock"}
-                        </p>
-                    </div>
+                    <Card className="border-l-4 border-l-red-500">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Out of Stock</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold font-display text-red-600 dark:text-red-400">{critical}</div>
+                            <p className="text-xs text-slate-400 mt-1">Requires immediate purchase order</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-l-4 border-l-amber-500">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Critical Stock</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold font-display text-amber-600 dark:text-amber-400">{high}</div>
+                            <p className="text-xs text-slate-400 mt-1">Below 50% threshold</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className={products.length === 0 ? "border-l-4 border-l-emerald-500" : "border-l-4 border-l-blue-500"}>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-500">
+                                {products.length === 0 ? "Status" : "Moderate Low"}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold font-display text-slate-900 dark:text-slate-100">
+                                {products.length === 0 ? "✓ Healthy" : low}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-1">
+                                {products.length === 0 ? "All items well supplied" : "Approaching minimum stock"}
+                            </p>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Table Card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    {/* Table Toolbar */}
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                {/* Filter Toolbar */}
+                <Card>
+                    <CardContent className="p-4">
                         <div className="relative">
-                            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-                            <input
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                            <Input
                                 type="text"
-                                placeholder="Search product, brand…"
+                                placeholder="Filter by product name, brand, or category..."
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-red-400 bg-slate-50 w-64"
+                                onChange={e => setSearch(e.target.value)}
+                                className="pl-9"
                             />
                         </div>
-                        <button
-                            onClick={() => navigate("/purchases")}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition"
-                        >
-                            <FaTruck />
-                            Create Purchase Order
-                        </button>
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="w-10 h-10 border-4 border-red-200 border-t-red-600 rounded-full animate-spin" />
-                        </div>
-                    ) : filtered.length === 0 ? (
-                        <div className="text-center py-20">
-                            <FaCheckCircle className="mx-auto text-5xl text-emerald-400 mb-4" />
-                            <p className="text-lg font-semibold text-slate-700">All stock levels are healthy!</p>
-                            <p className="text-slate-400 text-sm mt-1">No products are below their minimum stock threshold.</p>
-                        </div>
-                    ) : (
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100">
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        Product
-                                    </th>
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        Brand
-                                    </th>
-                                    <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        Current Stock
-                                    </th>
-                                    <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        Min Required
-                                    </th>
-                                    <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        Deficit
-                                    </th>
-                                    <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filtered.map((product) => {
-                                    const sev = SEVERITY(product.stock, product.minimum_stock);
-                                    const cfg = SEVERITY_CONFIG[sev];
-                                    const deficit = Math.max(0, product.minimum_stock - product.stock);
-                                    return (
-                                        <tr
-                                            key={product.id}
-                                            className={`transition-colors ${cfg.row}`}
-                                        >
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                                                    <span className="font-semibold text-slate-800 text-sm">
-                                                        {product.name}
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-red-500" />
+                                <p className="text-sm font-medium">Scanning stock thresholds...</p>
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-1" />
+                                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">All Stock Levels Healthy</p>
+                                <p className="text-xs text-slate-500">No items are currently below minimum safety stock.</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Product Name</TableHead>
+                                        <TableHead>Brand</TableHead>
+                                        <TableHead className="text-center">Current Stock</TableHead>
+                                        <TableHead className="text-center">Min Required</TableHead>
+                                        <TableHead className="text-center">Stock Deficit</TableHead>
+                                        <TableHead className="text-center">Urgency</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filtered.map(product => {
+                                        const deficit = Math.max(0, product.minimum_stock - product.stock);
+                                        const isOut = product.stock === 0;
+                                        return (
+                                            <TableRow key={product.id}>
+                                                <TableCell className="font-bold text-slate-900 dark:text-slate-100">{product.name}</TableCell>
+                                                <TableCell>{product.brand || "—"}</TableCell>
+                                                <TableCell className="text-center font-bold">
+                                                    <span className={isOut ? "text-red-500 font-extrabold" : "text-amber-600"}>
+                                                        {product.stock}
                                                     </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-sm text-slate-500">
-                                                {product.brand || "—"}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <span
-                                                    className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm ${
-                                                        product.stock === 0
-                                                            ? "bg-red-100 text-red-700"
-                                                            : "bg-orange-100 text-orange-700"
-                                                    }`}
-                                                >
-                                                    {product.stock}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center font-medium text-slate-600">
-                                                {product.minimum_stock}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <span className="font-bold text-red-600">
-                                                    -{deficit}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <span
-                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}
-                                                >
-                                                    {cfg.label}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    )}
-
-                    {filtered.length > 0 && (
-                        <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-400 bg-slate-50/50">
-                            Showing {filtered.length} of {products.length} low-stock products
-                        </div>
-                    )}
-                </div>
+                                                </TableCell>
+                                                <TableCell className="text-center text-slate-500">{product.minimum_stock}</TableCell>
+                                                <TableCell className="text-center font-bold text-red-500">-{deficit}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {isOut ? (
+                                                        <Badge variant="destructive" className="gap-1">
+                                                            <PackageX className="h-3 w-3" /> Out of Stock
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="warning" className="gap-1">
+                                                            <AlertTriangle className="h-3 w-3" /> Low Stock
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </AdminLayout>
     );

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
 import { toast } from "react-toastify";
 import {
     getExpenses,
@@ -9,30 +8,23 @@ import {
     deleteExpense,
     getExpenseSummary,
 } from "../services/expenseService";
-import {
-    FaReceipt,
-    FaPlus,
-    FaEdit,
-    FaTrash,
-    FaTimes,
-    FaWallet,
-    FaBolt,
-    FaHome,
-    FaUsers,
-    FaTruck,
-    FaTools,
-    FaEllipsisH,
-} from "react-icons/fa";
+import { Receipt, Plus, Edit3, Trash2, Zap, Home, Users, Truck, Wrench, MoreHorizontal, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from "../components/ui/table";
+import { Dialog } from "../components/ui/dialog";
 
 const CATEGORIES = ["Electricity", "Rent", "Salary", "Transport", "Maintenance", "Misc"];
 
 const CAT_CONFIG = {
-    Electricity: { icon: <FaBolt />, color: "from-yellow-400 to-amber-500", bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
-    Rent:        { icon: <FaHome />, color: "from-blue-500 to-indigo-600", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
-    Salary:      { icon: <FaUsers />, color: "from-violet-500 to-purple-600", bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200" },
-    Transport:   { icon: <FaTruck />, color: "from-green-500 to-emerald-600", bg: "bg-green-50", text: "text-green-700", border: "border-green-200" },
-    Maintenance: { icon: <FaTools />, color: "from-slate-500 to-gray-600", bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" },
-    Misc:        { icon: <FaEllipsisH />, color: "from-pink-500 to-rose-500", bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200" },
+    Electricity: { icon: Zap, color: "bg-amber-500" },
+    Rent:        { icon: Home, color: "bg-blue-600" },
+    Salary:      { icon: Users, color: "bg-purple-600" },
+    Transport:   { icon: Truck, color: "bg-emerald-600" },
+    Maintenance: { icon: Wrench, color: "bg-slate-600" },
+    Misc:        { icon: MoreHorizontal, color: "bg-rose-500" },
 };
 
 const MONTHS = [
@@ -45,147 +37,6 @@ const DEFAULT_MONTH = today.getMonth() + 1;
 const DEFAULT_YEAR  = today.getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => DEFAULT_YEAR - i);
 
-function ExpenseModal({ expense, onClose, onSaved }) {
-    const [form, setForm] = useState({
-        category: expense?.category || "Misc",
-        description: expense?.description || "",
-        amount: expense?.amount || "",
-        expense_date: expense?.expense_date || today.toISOString().slice(0, 10),
-    });
-    const [saving, setSaving] = useState(false);
-
-    function handleChange(field, value) {
-        setForm(f => ({ ...f, [field]: value }));
-    }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        if (!form.amount || Number(form.amount) <= 0) {
-            toast.warning("Amount must be greater than 0");
-            return;
-        }
-        setSaving(true);
-        try {
-            if (expense?.id) {
-                await updateExpense(expense.id, form);
-                toast.success("Expense updated!");
-            } else {
-                await addExpense(form);
-                toast.success("Expense added!");
-            }
-            onSaved();
-            onClose();
-        } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to save expense");
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-5 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center text-white">
-                            <FaReceipt />
-                        </div>
-                        <h2 className="font-bold text-slate-800">
-                            {expense?.id ? "Edit Expense" : "Add Expense"}
-                        </h2>
-                    </div>
-                    <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition">
-                        <FaTimes />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                    {/* Category */}
-                    <div>
-                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
-                            Category
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {CATEGORIES.map(cat => {
-                                const cfg = CAT_CONFIG[cat];
-                                return (
-                                    <button
-                                        key={cat}
-                                        type="button"
-                                        onClick={() => handleChange("category", cat)}
-                                        className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
-                                            form.category === cat
-                                                ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm`
-                                                : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                                        }`}
-                                    >
-                                        <span className="text-base">{cfg.icon}</span>
-                                        {cat}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                            Description (optional)
-                        </label>
-                        <input
-                            type="text"
-                            value={form.description}
-                            onChange={e => handleChange("description", e.target.value)}
-                            placeholder="e.g. Monthly electricity bill"
-                            className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 text-slate-700 text-sm"
-                        />
-                    </div>
-
-                    {/* Amount + Date */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                                Amount (₹)
-                            </label>
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                required
-                                value={form.amount}
-                                onChange={e => handleChange("amount", e.target.value)}
-                                placeholder="0.00"
-                                className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 text-slate-700 text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-                                Date
-                            </label>
-                            <input
-                                type="date"
-                                required
-                                value={form.expense_date}
-                                onChange={e => handleChange("expense_date", e.target.value)}
-                                className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 text-slate-700 text-sm"
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold text-sm transition shadow-lg shadow-rose-500/20 disabled:opacity-60"
-                    >
-                        {saving ? "Saving..." : expense?.id ? "Update Expense" : "Add Expense"}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-}
-
 export default function Expenses() {
     const [expenses, setExpenses] = useState([]);
     const [summary, setSummary] = useState(null);
@@ -194,6 +45,14 @@ export default function Expenses() {
     const [year, setYear] = useState(DEFAULT_YEAR);
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    const [form, setForm] = useState({
+        category: "Misc",
+        description: "",
+        amount: "",
+        expense_date: today.toISOString().slice(0, 10),
+    });
 
     useEffect(() => {
         loadAll();
@@ -208,10 +67,56 @@ export default function Expenses() {
             ]);
             setExpenses(exp);
             setSummary(sum);
-        } catch (err) {
+        } catch {
             toast.error("Failed to load expenses");
         } finally {
             setLoading(false);
+        }
+    }
+
+    function handleOpenCreate() {
+        setEditing(null);
+        setForm({
+            category: "Misc",
+            description: "",
+            amount: "",
+            expense_date: today.toISOString().slice(0, 10),
+        });
+        setShowModal(true);
+    }
+
+    function handleOpenEdit(exp) {
+        setEditing(exp);
+        setForm({
+            category: exp.category || "Misc",
+            description: exp.description || "",
+            amount: exp.amount || "",
+            expense_date: exp.expense_date || today.toISOString().slice(0, 10),
+        });
+        setShowModal(true);
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        if (!form.amount || Number(form.amount) <= 0) {
+            toast.warning("Amount must be greater than 0");
+            return;
+        }
+        setSaving(true);
+        try {
+            if (editing?.id) {
+                await updateExpense(editing.id, form);
+                toast.success("Expense updated!");
+            } else {
+                await addExpense(form);
+                toast.success("Expense added!");
+            }
+            setShowModal(false);
+            loadAll();
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Failed to save expense");
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -230,27 +135,28 @@ export default function Expenses() {
 
     return (
         <AdminLayout>
-            <Navbar />
-
-            <div className="space-y-6 p-2">
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                            <span className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-rose-500/30">
-                                <FaReceipt size={18} />
-                            </span>
-                            Expenses
-                        </h1>
-                        <p className="text-gray-500 mt-1 ml-[52px]">Track shop expenses to calculate net profit</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                            <Receipt className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Expense Tracker
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                                Log operational costs to accurately calculate net margins
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Month/Year Filter + Add Button */}
                     <div className="flex items-center gap-2 flex-wrap">
                         <select
                             value={month}
                             onChange={e => setMonth(Number(e.target.value))}
-                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-400/30 text-slate-700"
+                            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
                         >
                             {MONTHS.map((m, i) => (
                                 <option key={m} value={i + 1}>{m}</option>
@@ -259,148 +165,219 @@ export default function Expenses() {
                         <select
                             value={year}
                             onChange={e => setYear(Number(e.target.value))}
-                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-400/30 text-slate-700"
+                            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
                         >
                             {YEARS.map(y => (
                                 <option key={y} value={y}>{y}</option>
                             ))}
                         </select>
-                        <button
-                            onClick={() => { setEditing(null); setShowModal(true); }}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-sm font-semibold shadow hover:from-rose-600 hover:to-pink-700 transition"
-                        >
-                            <FaPlus />
-                            Add Expense
-                        </button>
+
+                        <Button variant="gradient" onClick={handleOpenCreate} className="text-slate-950 font-bold">
+                            <Plus className="h-4 w-4 mr-2" />
+                            <span>Add Expense</span>
+                        </Button>
                     </div>
                 </div>
 
                 {/* Summary Cards */}
                 {summary && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Grand Total */}
-                        <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-lg shadow-rose-500/20 relative overflow-hidden sm:col-span-2 lg:col-span-1">
-                            <div className="absolute -right-4 -bottom-4 opacity-10 text-8xl"><FaWallet /></div>
-                            <p className="text-white/80 text-sm font-medium mb-1">Total This Month</p>
-                            <p className="text-2xl font-bold">{fmt(summary.grand_total)}</p>
-                            <p className="text-white/70 text-xs mt-1">{MONTHS[month - 1]} {year}</p>
-                        </div>
+                        <Card className="border-l-4 border-l-rose-500">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Monthly Total</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold font-display text-rose-600 dark:text-rose-400">
+                                    {fmt(summary.grand_total)}
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">{MONTHS[month - 1]} {year}</p>
+                            </CardContent>
+                        </Card>
 
-                        {/* By Category */}
                         {summary.by_category.slice(0, 3).map(cat => {
                             const cfg = CAT_CONFIG[cat.category] || CAT_CONFIG["Misc"];
+                            const IconComp = cfg.icon;
                             return (
-                                <div key={cat.category} className={`bg-gradient-to-br ${cfg.color} rounded-2xl p-5 text-white shadow-lg relative overflow-hidden`}>
-                                    <div className="absolute -right-4 -bottom-4 opacity-10 text-8xl">{cfg.icon}</div>
-                                    <p className="text-white/80 text-sm font-medium mb-1">{cat.category}</p>
-                                    <p className="text-2xl font-bold">{fmt(cat.total)}</p>
-                                </div>
+                                <Card key={cat.category}>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-xs uppercase tracking-wider text-slate-500">{cat.category}</CardTitle>
+                                        <div className={`p-1.5 rounded-lg text-white ${cfg.color}`}>
+                                            <IconComp className="h-3.5 w-3.5" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-xl font-bold font-display text-slate-900 dark:text-slate-100">
+                                            {fmt(cat.total)}
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             );
                         })}
                     </div>
                 )}
 
-                {/* Expenses Table */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                        <h2 className="font-semibold text-slate-700">
-                            {MONTHS[month - 1]} {year} — Expense Log
-                        </h2>
-                        <span className="text-sm text-slate-400">{expenses.length} entries</span>
-                    </div>
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+                                <p className="text-sm font-medium">Loading expense records...</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-center">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {expenses.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-16 text-slate-400">
+                                                <Receipt className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                                                <p className="font-semibold">No expenses recorded for {MONTHS[month - 1]} {year}</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        expenses.map(exp => {
+                                            const cfg = CAT_CONFIG[exp.category] || CAT_CONFIG["Misc"];
+                                            const IconComp = cfg.icon;
+                                            return (
+                                                <TableRow key={exp.id}>
+                                                    <TableCell className="text-slate-500 text-xs">
+                                                        {exp.expense_date
+                                                            ? new Date(exp.expense_date + "T00:00:00").toLocaleDateString("en-IN", {
+                                                                  day: "numeric", month: "short", year: "numeric"
+                                                              })
+                                                            : "—"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className="gap-1.5 text-xs">
+                                                            <IconComp className="h-3 w-3 text-slate-500" />
+                                                            <span>{exp.category}</span>
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-600 dark:text-slate-300">
+                                                        {exp.description || <span className="text-slate-400 italic">No description</span>}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-bold text-slate-900 dark:text-slate-100">
+                                                        {fmt(exp.amount)}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleOpenEdit(exp)}
+                                                                className="h-8 w-8 text-amber-600 hover:bg-amber-500/10"
+                                                            >
+                                                                <Edit3 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDelete(exp.id)}
+                                                                className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="font-bold text-slate-900 dark:text-slate-100">Total Monthly Expenses</TableCell>
+                                        <TableCell className="text-right font-bold text-rose-600 dark:text-rose-400 text-base">
+                                            {fmt(expenses.reduce((s, e) => s + Number(e.amount), 0))}
+                                        </TableCell>
+                                        <TableCell />
+                                    </TableRow>
+                                </TableFooter>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
 
-                    {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="w-10 h-10 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin" />
+                {/* Expense Modal */}
+                <Dialog
+                    isOpen={showModal}
+                    onClose={() => setShowModal(false)}
+                    title={editing ? "Edit Expense Entry" : "Record New Expense"}
+                >
+                    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {CATEGORIES.map(cat => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        onClick={() => setForm(f => ({ ...f, category: cat }))}
+                                        className={`py-2 px-2 rounded-xl border text-xs font-semibold transition ${
+                                            form.category === cat
+                                                ? "bg-amber-500 text-slate-950 border-amber-500 font-bold"
+                                                : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300"
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    ) : expenses.length === 0 ? (
-                        <div className="text-center py-20">
-                            <FaReceipt className="mx-auto text-5xl text-slate-300 mb-4" />
-                            <p className="text-lg font-semibold text-slate-500">No expenses this month</p>
-                            <p className="text-slate-400 text-sm mt-1">Click "Add Expense" to record one</p>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Description</label>
+                            <Input
+                                type="text"
+                                placeholder="e.g. Electric bill for June"
+                                value={form.description}
+                                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                            />
                         </div>
-                    ) : (
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100">
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
-                                    <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
-                                    <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {expenses.map(exp => {
-                                    const cfg = CAT_CONFIG[exp.category] || CAT_CONFIG["Misc"];
-                                    return (
-                                        <tr key={exp.id} className="hover:bg-slate-50/60 transition-colors group">
-                                            <td className="px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">
-                                                {exp.expense_date
-                                                    ? new Date(exp.expense_date + "T00:00:00").toLocaleDateString("en-IN", {
-                                                          day: "numeric", month: "short", year: "numeric"
-                                                      })
-                                                    : "—"}
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                                    {cfg.icon}
-                                                    {exp.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-sm text-slate-600">
-                                                {exp.description || <span className="text-slate-300 italic">No description</span>}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right font-bold text-slate-800">
-                                                {fmt(exp.amount)}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => { setEditing(exp); setShowModal(true); }}
-                                                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                                                        title="Edit"
-                                                    >
-                                                        <FaEdit />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(exp.id)}
-                                                        className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition"
-                                                        title="Delete"
-                                                    >
-                                                        <FaTrash />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            {/* Footer total */}
-                            <tfoot>
-                                <tr className="bg-slate-50 border-t-2 border-slate-200">
-                                    <td colSpan={3} className="px-5 py-3.5 font-semibold text-slate-600 text-sm uppercase tracking-wider">
-                                        Monthly Total
-                                    </td>
-                                    <td className="px-5 py-3.5 text-right font-bold text-rose-600 text-lg">
-                                        {fmt(expenses.reduce((s, e) => s + Number(e.amount), 0))}
-                                    </td>
-                                    <td />
-                                </tr>
-                            </tfoot>
-                        </table>
-                    )}
-                </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount (₹)</label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    required
+                                    value={form.amount}
+                                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</label>
+                                <Input
+                                    type="date"
+                                    required
+                                    value={form.expense_date}
+                                    onChange={e => setForm(f => ({ ...f, expense_date: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-3">
+                            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" variant="gradient" disabled={saving} className="text-slate-950 font-bold">
+                                {saving ? "Saving..." : editing ? "Update Expense" : "Save Expense"}
+                            </Button>
+                        </div>
+                    </form>
+                </Dialog>
             </div>
-
-            {/* Add/Edit Modal */}
-            {showModal && (
-                <ExpenseModal
-                    expense={editing}
-                    onClose={() => { setShowModal(false); setEditing(null); }}
-                    onSaved={loadAll}
-                />
-            )}
         </AdminLayout>
     );
 }

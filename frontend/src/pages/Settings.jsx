@@ -1,17 +1,13 @@
 import { useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import { changeMyPassword } from "../services/userService";
 import { toast } from "react-toastify";
-import {
-    FaUser,
-    FaShieldAlt,
-    FaLock,
-    FaEye,
-    FaEyeSlash,
-    FaSignOutAlt,
-} from "react-icons/fa";
+import { Settings as SettingsIcon, User, ShieldCheck, Lock, Eye, EyeOff, LogOut } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
 
 export default function Settings() {
     const { user, logout } = useAuth();
@@ -52,168 +48,154 @@ export default function Settings() {
         }
     }
 
-    const ROLE_COLORS = {
-        Owner: "bg-yellow-100 text-yellow-800",
-        Manager: "bg-blue-100 text-blue-800",
-        Cashier: "bg-green-100 text-green-800",
-    };
-
     return (
         <AdminLayout>
-            <Navbar />
-
-            <div className="max-w-2xl mx-auto space-y-6 p-2">
-
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Settings</h1>
-                    <p className="text-gray-500 mt-1">Manage your account preferences</p>
-                </div>
-
-                {/* ── Profile Card ── */}
-                <div className="bg-white rounded-2xl shadow p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                        <FaUser className="text-blue-600" size={20} />
-                        <h2 className="text-lg font-bold text-gray-800">Profile Information</h2>
+            <div className="space-y-6 max-w-3xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <SettingsIcon className="h-6 w-6" />
                     </div>
-
-                    <div className="flex items-center gap-5">
-                        <div className="w-16 h-16 rounded-full bg-slate-800 text-white flex items-center justify-center text-2xl font-bold shadow">
-                            {user?.full_name?.charAt(0)?.toUpperCase() || "?"}
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-xl font-bold text-gray-800">{user?.full_name || "—"}</p>
-                            <p className="text-gray-500 font-mono text-sm">@{user?.username}</p>
-                            <span className={`mt-1.5 inline-block px-3 py-0.5 rounded-full text-xs font-semibold ${ROLE_COLORS[user?.role] || "bg-gray-100 text-gray-700"}`}>
-                                {user?.role}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">Username</p>
-                            <p className="font-semibold text-gray-700 font-mono">@{user?.username}</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">User ID</p>
-                            <p className="font-semibold text-gray-700">#{user?.id}</p>
-                        </div>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                            Account Settings
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                            Manage user credentials, security keys, and active session
+                        </p>
                     </div>
                 </div>
 
-                {/* ── Change Password ── */}
-                <div className="bg-white rounded-2xl shadow p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                        <FaShieldAlt className="text-blue-600" size={20} />
-                        <h2 className="text-lg font-bold text-gray-800">Change Password</h2>
-                    </div>
-
-                    <form onSubmit={handleChangePassword} className="space-y-4">
-
-                        {/* Current Password */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
-                            <div className="relative">
-                                <FaLock className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
-                                <input
-                                    type={showCurrent ? "text" : "password"}
-                                    required
-                                    value={currentPassword}
-                                    onChange={e => setCurrentPassword(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Enter current password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCurrent(!showCurrent)}
-                                    className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600"
-                                >
-                                    {showCurrent ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                                </button>
+                {/* Profile Card */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <User className="h-5 w-5 text-amber-500" />
+                            <span>Profile Summary</span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500 text-slate-950 font-bold text-2xl font-display shadow-lg shadow-amber-500/20">
+                                {user?.full_name?.charAt(0)?.toUpperCase() || "U"}
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{user?.full_name || "—"}</h2>
+                                <p className="text-sm font-mono text-slate-400">@{user?.username}</p>
+                                <Badge variant="warning" className="mt-1">
+                                    {user?.role || "User"}
+                                </Badge>
                             </div>
                         </div>
 
-                        {/* New Password */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
-                            <div className="relative">
-                                <FaLock className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
-                                <input
-                                    type={showNew ? "text" : "password"}
-                                    required
-                                    minLength={6}
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Minimum 6 characters"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNew(!showNew)}
-                                    className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600"
-                                >
-                                    {showNew ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                                </button>
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 block">Username</span>
+                                <span className="text-sm font-mono font-bold">@{user?.username}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 block">System ID</span>
+                                <span className="text-sm font-bold">#{user?.id}</span>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
 
-                        {/* Confirm Password */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
-                            <div className="relative">
-                                <FaLock className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
-                                <input
-                                    type={showConfirm ? "text" : "password"}
-                                    required
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                    className={`w-full border rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500
-                                        ${confirmPassword && confirmPassword !== newPassword
-                                            ? "border-red-400 focus:ring-red-400"
-                                            : "border-gray-300"}`}
-                                    placeholder="Re-enter new password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirm(!showConfirm)}
-                                    className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600"
-                                >
-                                    {showConfirm ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                                </button>
+                {/* Password Card */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <ShieldCheck className="h-5 w-5 text-amber-500" />
+                            <span>Security & Credentials</span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleChangePassword} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Current Password</label>
+                                <div className="relative">
+                                    <Input
+                                        type={showCurrent ? "text" : "password"}
+                                        required
+                                        placeholder="Enter current password"
+                                        value={currentPassword}
+                                        onChange={e => setCurrentPassword(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCurrent(!showCurrent)}
+                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                                    >
+                                        {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
                             </div>
-                            {confirmPassword && confirmPassword !== newPassword && (
-                                <p className="text-red-500 text-xs mt-1">Passwords do not match</p>
-                            )}
-                        </div>
 
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-3 rounded-xl font-semibold transition shadow mt-2"
-                        >
-                            {saving ? "Saving..." : "Change Password"}
-                        </button>
-                    </form>
-                </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">New Password</label>
+                                <div className="relative">
+                                    <Input
+                                        type={showNew ? "text" : "password"}
+                                        required minLength={6}
+                                        placeholder="Minimum 6 characters"
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNew(!showNew)}
+                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                                    >
+                                        {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
 
-                {/* ── Danger Zone ── */}
-                <div className="bg-white rounded-2xl shadow p-6 border border-red-100">
-                    <div className="flex items-center gap-3 mb-4">
-                        <FaSignOutAlt className="text-red-500" size={18} />
-                        <h2 className="text-lg font-bold text-gray-800">Session</h2>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">
-                        You are currently signed in as <strong>@{user?.username}</strong>.
-                        Signing out will clear your session.
-                    </p>
-                    <button
-                        onClick={logout}
-                        className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold px-5 py-2.5 rounded-xl transition border border-red-200"
-                    >
-                        <FaSignOutAlt />
-                        Sign Out
-                    </button>
-                </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Confirm Password</label>
+                                <div className="relative">
+                                    <Input
+                                        type={showConfirm ? "text" : "password"}
+                                        required
+                                        placeholder="Confirm new password"
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirm(!showConfirm)}
+                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                                    >
+                                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <Button type="submit" variant="gradient" disabled={saving} className="w-full text-slate-950 font-bold">
+                                {saving ? "Updating Security..." : "Change Password"}
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                {/* Session Card */}
+                <Card className="border-red-500/20">
+                    <CardHeader>
+                        <CardTitle className="text-base font-bold text-red-500 flex items-center gap-2">
+                            <LogOut className="h-5 w-5" />
+                            <span>Sign Out Session</span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-xs text-slate-500">End your active session on this device.</p>
+                        <Button variant="destructive" onClick={logout} className="w-full">
+                            Sign Out Account
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </AdminLayout>
     );

@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
 import CustomerModal from "../components/Customers/CustomerModal";
 import CreditHistoryModal from "../components/Customers/CreditHistoryModal";
 import { toast } from "react-toastify";
-import {
-    FaUsers, FaPlus, FaSearch, FaEdit, FaTrash,
-    FaWallet, FaPhone, FaHistory
-} from "react-icons/fa";
+import { Users, Plus, Search, Edit3, Trash2, Wallet, Phone, History, Loader2 } from "lucide-react";
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer, checkCustomerLinks, forceDeleteCustomer } from "../services/customerService";
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
+import { Dialog } from "../components/ui/dialog";
 
 export default function Customers() {
     const [customers, setCustomers] = useState([]);
@@ -94,12 +96,10 @@ export default function Customers() {
         }
     }
 
-    // Called by CreditHistoryModal after a payment is recorded
     function handleBalanceUpdate(customerId, newBalance) {
         setCustomers(prev =>
             prev.map(c => c.id === customerId ? { ...c, credit_balance: newBalance } : c)
         );
-        // Also sync the open modal's customer object
         if (creditCustomer?.id === customerId) {
             setCreditCustomer(prev => ({ ...prev, credit_balance: newBalance }));
         }
@@ -110,251 +110,225 @@ export default function Customers() {
 
     return (
         <AdminLayout>
-            <Navbar />
-
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
-                        <FaUsers />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Customers</h1>
-                        <p className="text-sm text-slate-500">
-                            {customers.length} registered
-                            {creditCount > 0 && (
-                                <> &nbsp;·&nbsp;
-                                    <span className="text-red-500 font-semibold">
-                                        {creditCount} on credit · ₹{totalCredit.toFixed(2)} outstanding
-                                    </span>
-                                </>
-                            )}
-                        </p>
-                    </div>
-                </div>
-                <button
-                    id="add-customer-btn"
-                    onClick={() => { setSelectedCustomer(null); setShowModal(true); }}
-                    className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-violet-600/30 transition-all"
-                >
-                    <FaPlus /> Add Customer
-                </button>
-            </div>
-
-            {/* Search */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
-                <div className="relative">
-                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        id="customer-search"
-                        type="text"
-                        placeholder="Search by name, mobile, or address..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition"
-                    />
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                {loading ? (
-                    <div className="flex items-center justify-center py-20 text-slate-400">
-                        <div className="text-center">
-                            <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-3" />
-                            <p className="text-sm">Loading customers...</p>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                            <Users className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Customer Management
+                            </h1>
+                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                                <span>{customers.length} Registered</span>
+                                {creditCount > 0 && (
+                                    <>
+                                        <span>•</span>
+                                        <Badge variant="destructive" className="px-2 py-0 text-xs">
+                                            {creditCount} Credit Account{creditCount > 1 ? "s" : ""} (₹{totalCredit.toFixed(2)})
+                                        </Badge>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                ) : (
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100">
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Mobile</th>
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Address</th>
-                                <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Credit Balance</th>
-                                <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="text-center py-16 text-slate-400">
-                                        <FaUsers className="mx-auto text-4xl mb-3 opacity-30" />
-                                        <p className="font-medium">No customers found</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filtered.map((customer, idx) => {
-                                    const credit = Number(customer.credit_balance || 0);
-                                    const hasCredit = credit > 0;
-                                    return (
-                                        <tr key={customer.id} className="hover:bg-violet-50/30 transition-colors group">
-                                            <td className="px-5 py-3.5 text-sm text-slate-400">{idx + 1}</td>
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                                                        hasCredit
-                                                            ? "bg-gradient-to-br from-red-400 to-rose-500"
-                                                            : "bg-gradient-to-br from-violet-500 to-purple-600"
-                                                    }`}>
-                                                        {customer.name?.charAt(0)?.toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-semibold text-slate-800">{customer.name}</span>
-                                                        {hasCredit && (
-                                                            <span className="ml-2 text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded-full font-medium">
-                                                                Owes
+
+                    <Button
+                        id="add-customer-btn"
+                        variant="gradient"
+                        onClick={() => { setSelectedCustomer(null); setShowModal(true); }}
+                        className="text-slate-950 font-bold"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        <span>Add Customer</span>
+                    </Button>
+                </div>
+
+                {/* Search Toolbar */}
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                            <Input
+                                id="customer-search"
+                                type="text"
+                                placeholder="Search by customer name, mobile, or address..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                                <p className="text-sm font-medium">Fetching customers list...</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>#</TableHead>
+                                        <TableHead>Customer Name</TableHead>
+                                        <TableHead>Mobile</TableHead>
+                                        <TableHead>Address</TableHead>
+                                        <TableHead className="text-right">Credit Balance</TableHead>
+                                        <TableHead className="text-center">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filtered.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-16 text-slate-400">
+                                                <Users className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                                                <p className="font-semibold">No customers found</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filtered.map((customer, idx) => {
+                                            const credit = Number(customer.credit_balance || 0);
+                                            const hasCredit = credit > 0;
+                                            return (
+                                                <TableRow key={customer.id}>
+                                                    <TableCell className="text-slate-400 text-xs">{idx + 1}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${hasCredit ? "bg-red-500" : "bg-purple-600"}`}>
+                                                                {customer.name?.charAt(0)?.toUpperCase()}
+                                                            </div>
+                                                            <span className="font-bold text-slate-900 dark:text-slate-100">{customer.name}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                                                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                                            <span>{customer.mobile || "—"}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-500 max-w-xs truncate">
+                                                        {customer.address || "—"}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-bold">
+                                                        {hasCredit ? (
+                                                            <span className="text-red-500 flex items-center justify-end gap-1">
+                                                                <Wallet className="h-3.5 w-3.5" />
+                                                                ₹{credit.toFixed(2)}
                                                             </span>
+                                                        ) : (
+                                                            <Badge variant="success" className="text-[10px]">
+                                                                Clear ✓
+                                                            </Badge>
                                                         )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-1.5 text-slate-600">
-                                                    <FaPhone className="text-xs text-slate-400" />
-                                                    {customer.mobile || "—"}
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-slate-500 text-sm max-w-xs truncate">
-                                                {customer.address || "—"}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right">
-                                                {hasCredit ? (
-                                                    <span className="inline-flex items-center gap-1.5 font-bold text-red-500">
-                                                        <FaWallet className="text-xs" />
-                                                        ₹{credit.toFixed(2)}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-emerald-500 text-sm font-medium">Clear ✓</span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {/* Credit History button — always visible for UX */}
-                                                    <button
-                                                        id={`credit-history-${customer.id}`}
-                                                        onClick={() => setCreditCustomer(customer)}
-                                                        className={`p-2 rounded-lg transition-colors ${
-                                                            hasCredit
-                                                                ? "bg-red-50 text-red-500 hover:bg-red-100"
-                                                                : "bg-amber-50 text-amber-500 hover:bg-amber-100"
-                                                        }`}
-                                                        title="Credit History"
-                                                    >
-                                                        <FaHistory />
-                                                    </button>
-                                                    <button
-                                                        id={`edit-customer-${customer.id}`}
-                                                        onClick={() => { setSelectedCustomer(customer); setShowModal(true); }}
-                                                        className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <FaEdit />
-                                                    </button>
-                                                    <button
-                                                        id={`delete-customer-${customer.id}`}
-                                                        onClick={() => handleDeleteClick(customer)}
-                                                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <FaTrash />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <Button
+                                                                id={`credit-history-${customer.id}`}
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => setCreditCustomer(customer)}
+                                                                className="h-8 w-8 text-purple-600 hover:bg-purple-500/10"
+                                                                title="Credit Ledger"
+                                                            >
+                                                                <History className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                id={`edit-customer-${customer.id}`}
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => { setSelectedCustomer(customer); setShowModal(true); }}
+                                                                className="h-8 w-8 text-amber-600 hover:bg-amber-500/10"
+                                                                title="Edit"
+                                                            >
+                                                                <Edit3 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                id={`delete-customer-${customer.id}`}
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDeleteClick(customer)}
+                                                                className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Add/Edit Modal */}
+                {showModal && (
+                    <CustomerModal
+                        customer={selectedCustomer}
+                        onClose={() => { setShowModal(false); setSelectedCustomer(null); }}
+                        onSave={handleSave}
+                    />
                 )}
-            </div>
 
-            {/* Customer Add/Edit Modal */}
-            {showModal && (
-                <CustomerModal
-                    customer={selectedCustomer}
-                    onClose={() => { setShowModal(false); setSelectedCustomer(null); }}
-                    onSave={handleSave}
-                />
-            )}
+                {/* Credit Ledger Modal */}
+                {creditCustomer && (
+                    <CreditHistoryModal
+                        customer={creditCustomer}
+                        onClose={() => setCreditCustomer(null)}
+                        onBalanceUpdate={(newBalance) => handleBalanceUpdate(creditCustomer.id, newBalance)}
+                    />
+                )}
 
-            {/* Credit History Modal */}
-            {creditCustomer && (
-                <CreditHistoryModal
-                    customer={creditCustomer}
-                    onClose={() => setCreditCustomer(null)}
-                    onBalanceUpdate={(newBalance) => handleBalanceUpdate(creditCustomer.id, newBalance)}
-                />
-            )}
-
-            {/* Delete Confirm */}
-            {deleteConfirm && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-                        <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FaTrash className="text-red-500 text-xl" />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-2">Remove Customer?</h3>
-                        <p className="text-slate-500 text-sm mb-4">
-                            Delete <strong>"{deleteConfirm.name}"</strong> permanently?
-                        </p>
-
-                        {/* Checking spinner */}
+                {/* Delete Dialog */}
+                <Dialog
+                    isOpen={!!deleteConfirm}
+                    onClose={() => { setDeleteConfirm(null); setLinkInfo(null); }}
+                    title="Remove Customer"
+                    description={`Permanently delete "${deleteConfirm?.name}"?`}
+                >
+                    <div className="space-y-4 pt-2">
                         {linkInfo === null && (
-                            <div className="flex items-center justify-center gap-2 text-slate-400 text-sm mb-4">
-                                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
-                                Checking linked data...
+                            <div className="flex items-center gap-2 text-slate-400 text-xs">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Verifying linked orders...</span>
                             </div>
                         )}
 
-                        {/* Linked records warning */}
                         {linkInfo?.has_links && (
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-left">
-                                <p className="text-red-700 text-xs font-semibold mb-2">⚠ This customer has linked records:</p>
-                                <ul className="text-red-600 text-xs space-y-1">
-                                    {linkInfo.sales > 0 && (
-                                        <li>• {linkInfo.sales} sale{linkInfo.sales > 1 ? 's' : ''} (invoices + items)</li>
-                                    )}
-                                    {linkInfo.credit_payments > 0 && (
-                                        <li>• {linkInfo.credit_payments} credit payment record{linkInfo.credit_payments > 1 ? 's' : ''}</li>
-                                    )}
-                                </ul>
-                                <p className="text-red-500 text-xs mt-2 font-medium">
-                                    Force delete will permanently remove all linked data.
-                                </p>
+                            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs space-y-1">
+                                <p className="font-bold">⚠ Customer has associated data:</p>
+                                {linkInfo.sales > 0 && <p>• {linkInfo.sales} sales invoices</p>}
+                                {linkInfo.credit_payments > 0 && <p>• {linkInfo.credit_payments} credit transactions</p>}
                             </div>
                         )}
 
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => { setDeleteConfirm(null); setLinkInfo(null); }}
-                                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition"
-                            >
+                        <div className="flex gap-3 justify-end pt-2">
+                            <Button variant="outline" onClick={() => { setDeleteConfirm(null); setLinkInfo(null); }}>
                                 Cancel
-                            </button>
+                            </Button>
                             {linkInfo?.has_links ? (
-                                <button
-                                    onClick={() => confirmDelete(true)}
-                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition text-sm"
-                                >
+                                <Button variant="destructive" onClick={() => confirmDelete(true)}>
                                     Force Delete All
-                                </button>
+                                </Button>
                             ) : (
-                                <button
-                                    onClick={() => confirmDelete(false)}
-                                    disabled={linkInfo === null}
-                                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-medium transition"
-                                >
-                                    Remove
-                                </button>
+                                <Button variant="destructive" disabled={linkInfo === null} onClick={() => confirmDelete(false)}>
+                                    Remove Customer
+                                </Button>
                             )}
                         </div>
                     </div>
-                </div>
-            )}
+                </Dialog>
+            </div>
         </AdminLayout>
     );
 }

@@ -1,23 +1,23 @@
 import { useEffect, useState, useCallback } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
 import { toast } from "react-toastify";
-import {
-    FaWallet, FaMoneyBillWave, FaUniversity, FaPlus, FaTrash,
-    FaArrowUp, FaArrowDown, FaFilter, FaTimes, FaCalendarAlt
-} from "react-icons/fa";
-import {
-    getCashSummary, getCashEntries, addCashEntry, deleteCashEntry
-} from "../services/cashRegisterService";
+import { Wallet, Landmark, Plus, Trash2, ArrowUpRight, ArrowDownLeft, X, Calendar, Loader2 } from "lucide-react";
+import { getCashSummary, getCashEntries, addCashEntry, deleteCashEntry } from "../services/cashRegisterService";
 import { getPendingBills } from "../services/supplierBillsService";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
+import { Dialog } from "../components/ui/dialog";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 const TYPE_CONFIG = {
-    cash_in:  { label: "Cash In",  color: "text-emerald-600", bg: "bg-emerald-50",  border: "border-emerald-200", dot: "bg-emerald-500", icon: <FaArrowUp /> },
-    cash_out: { label: "Cash Out", color: "text-red-500",     bg: "bg-red-50",      border: "border-red-200",     dot: "bg-red-500",     icon: <FaArrowDown /> },
-    bank_in:  { label: "Bank In",  color: "text-blue-600",    bg: "bg-blue-50",     border: "border-blue-200",    dot: "bg-blue-500",    icon: <FaArrowUp /> },
-    bank_out: { label: "Bank Out", color: "text-orange-500",  bg: "bg-orange-50",   border: "border-orange-200",  dot: "bg-orange-500",  icon: <FaArrowDown /> },
+    cash_in:  { label: "Cash In",  variant: "success",  isOut: false },
+    cash_out: { label: "Cash Out", variant: "destructive", isOut: true },
+    bank_in:  { label: "Bank In",  variant: "purple",   isOut: false },
+    bank_out: { label: "Bank Out", variant: "warning",  isOut: true },
 };
 
 const CATEGORIES = [
@@ -28,26 +28,6 @@ const CATEGORIES = [
     { value: "transfer",     label: "Cash ↔ Bank Transfer" },
     { value: "other",        label: "Other" },
 ];
-
-function BalanceCard({ title, value, subtitle, icon, gradient, iconBg, positive }) {
-    return (
-        <div className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-lg ${gradient}`}>
-            <div className="flex items-start justify-between">
-                <div>
-                    <p className="text-white/70 text-sm font-medium mb-1">{title}</p>
-                    <p className={`text-2xl font-bold ${positive === false ? "text-red-200" : ""}`}>
-                        ₹{Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </p>
-                    {subtitle && <p className="text-white/60 text-xs mt-1">{subtitle}</p>}
-                </div>
-                <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center text-white text-xl flex-shrink-0`}>
-                    {icon}
-                </div>
-            </div>
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full bg-white/10" />
-        </div>
-    );
-}
 
 const ENTRY_TYPES = [
     { value: "cash_in",  label: "Cash In" },
@@ -64,7 +44,6 @@ export default function CashRegister() {
     const [showForm, setShowForm] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-    // Form state
     const [form, setForm] = useState({
         entry_type: "cash_in",
         category: "daily_sales",
@@ -76,6 +55,11 @@ export default function CashRegister() {
 
     const [pendingBills, setPendingBills] = useState([]);
     const [selectedBillId, setSelectedBillId] = useState("");
+
+    const [filterType, setFilterType] = useState("");
+    const [filterFrom, setFilterFrom] = useState("");
+    const [filterTo, setFilterTo] = useState("");
+    const [page, setPage] = useState(1);
 
     useEffect(() => {
         if (showForm && form.category === "bill_payment") {
@@ -110,12 +94,6 @@ export default function CashRegister() {
         }
     }
 
-    // Filters
-    const [filterType, setFilterType] = useState("");
-    const [filterFrom, setFilterFrom] = useState("");
-    const [filterTo, setFilterTo] = useState("");
-    const [page, setPage] = useState(1);
-
     const load = useCallback(async () => {
         try {
             setLoading(true);
@@ -126,8 +104,8 @@ export default function CashRegister() {
             setSummary(sumData);
             setEntries(entriesData.entries);
             setPagination({ total: entriesData.total, page: entriesData.page, pages: entriesData.pages });
-        } catch (err) {
-            toast.error("Failed to load data");
+        } catch {
+            toast.error("Failed to load cash data");
         } finally {
             setLoading(false);
         }
@@ -140,8 +118,8 @@ export default function CashRegister() {
         if (!form.amount || Number(form.amount) <= 0) { toast.warning("Enter a valid amount"); return; }
         try {
             setSaving(true);
-            await addCashEntry({ 
-                ...form, 
+            await addCashEntry({
+                ...form,
                 amount: Number(form.amount),
                 supplier_bill_id: selectedBillId ? Number(selectedBillId) : null
             });
@@ -169,405 +147,279 @@ export default function CashRegister() {
         }
     }
 
-    function clearFilters() {
-        setFilterType(""); setFilterFrom(""); setFilterTo(""); setPage(1);
-    }
-
     return (
         <AdminLayout>
-            <Navbar />
-
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg">
-                        <FaWallet />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Cash Register</h1>
-                        <p className="text-sm text-slate-500">Track your cash & bank balances</p>
-                    </div>
-                </div>
-                <button
-                    id="add-entry-btn"
-                    onClick={() => setShowForm(v => !v)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-lg transition-all ${
-                        showForm
-                            ? "bg-slate-200 text-slate-700"
-                            : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/30"
-                    }`}
-                >
-                    {showForm ? <><FaTimes /> Cancel</> : <><FaPlus /> Add Entry</>}
-                </button>
-            </div>
-
-            {/* Balance Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <BalanceCard
-                    title="Total Balance"
-                    value={summary.total_balance}
-                    subtitle="Cash + Bank combined"
-                    icon={<FaWallet />}
-                    gradient="bg-gradient-to-br from-slate-700 to-slate-900"
-                    iconBg="bg-white/20"
-                />
-                <BalanceCard
-                    title="Cash in Hand"
-                    value={summary.cash_balance}
-                    subtitle="Physical cash"
-                    icon={<FaMoneyBillWave />}
-                    gradient={summary.cash_balance >= 0 ? "bg-gradient-to-br from-emerald-500 to-teal-600" : "bg-gradient-to-br from-red-500 to-rose-600"}
-                    iconBg="bg-white/20"
-                    positive={summary.cash_balance >= 0}
-                />
-                <BalanceCard
-                    title="Bank / UPI"
-                    value={summary.bank_balance}
-                    subtitle="Account balance"
-                    icon={<FaUniversity />}
-                    gradient={summary.bank_balance >= 0 ? "bg-gradient-to-br from-blue-500 to-indigo-600" : "bg-gradient-to-br from-red-500 to-rose-600"}
-                    iconBg="bg-white/20"
-                    positive={summary.bank_balance >= 0}
-                />
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Today's Activity</p>
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5 text-emerald-600">
-                            <FaArrowUp className="text-xs" />
-                            <span className="text-sm font-medium">In</span>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <Wallet className="h-6 w-6" />
                         </div>
-                        <span className="font-bold text-emerald-600">₹{Number(summary.today_in).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-1.5 text-red-500">
-                            <FaArrowDown className="text-xs" />
-                            <span className="text-sm font-medium">Out</span>
-                        </div>
-                        <span className="font-bold text-red-500">₹{Number(summary.today_out).toFixed(2)}</span>
-                    </div>
-                    <div className="h-px bg-slate-100 mb-3" />
-                    <div className="flex justify-between">
-                        <span className="text-sm text-slate-500">Net today</span>
-                        <span className={`font-bold text-sm ${summary.today_in - summary.today_out >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                            ₹{(Number(summary.today_in) - Number(summary.today_out)).toFixed(2)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Add Entry Form */}
-            {showForm && (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                    <h2 className="text-base font-bold text-slate-700 mb-4 flex items-center gap-2">
-                        <FaPlus className="text-emerald-500 text-sm" /> New Entry
-                    </h2>
-                    <form onSubmit={handleSave} className="space-y-4">
-                        {/* Entry type selector */}
                         <div>
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Transaction Type</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {ENTRY_TYPES.map(t => {
-                                    const cfg = TYPE_CONFIG[t.value];
-                                    return (
-                                        <button
-                                            key={t.value}
-                                            type="button"
-                                            id={`type-${t.value}`}
-                                            onClick={() => setForm(f => ({ ...f, entry_type: t.value }))}
-                                            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                                                form.entry_type === t.value
-                                                    ? `${cfg.bg} ${cfg.border} ${cfg.color} shadow-sm`
-                                                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                                            }`}
-                                        >
-                                            <span className={form.entry_type === t.value ? cfg.color : "text-slate-400"}>{cfg.icon}</span>
-                                            {t.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Cash Register & Ledger
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                                Physical drawer cash and bank liquidity management
+                            </p>
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                <label className="text-xs text-slate-500 font-medium mb-1 block">Category</label>
-                                <select
-                                    value={form.category}
-                                    onChange={e => {
-                                        setForm(f => ({ ...f, category: e.target.value }));
-                                        setSelectedBillId("");
-                                    }}
-                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
-                                >
-                                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs text-slate-500 font-medium mb-1 block">Amount (₹)</label>
-                                <input
-                                    id="entry-amount"
-                                    type="number" step="0.01" min="0.01"
-                                    value={form.amount}
-                                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                                    placeholder="0.00"
-                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs text-slate-500 font-medium mb-1 flex items-center gap-1 block">
-                                    <FaCalendarAlt className="text-slate-400 text-xs" /> Date
-                                </label>
-                                <input
-                                    id="entry-date"
-                                    type="date"
-                                    value={form.entry_date}
-                                    onChange={e => setForm(f => ({ ...f, entry_date: e.target.value }))}
-                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
-                                />
-                            </div>
-                        </div>
+                    <Button
+                        variant={showForm ? "outline" : "gradient"}
+                        onClick={() => setShowForm(v => !v)}
+                        className={showForm ? "" : "text-slate-950 font-bold"}
+                    >
+                        {showForm ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                        <span>{showForm ? "Close Form" : "New Register Entry"}</span>
+                    </Button>
+                </div>
 
-                        {form.category === "transfer" && (
-                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3.5 text-xs font-semibold flex items-start gap-2.5">
-                                <span className="text-base">💡</span>
-                                <div>
-                                    {form.entry_type === "cash_out" || form.entry_type === "bank_in" ? (
-                                        <span>
-                                            <strong>Cash to Bank Transfer:</strong> This will simultaneously reduce physical <strong>Cash in Hand</strong> and increase your <strong>Bank / UPI Balance</strong> by ₹{form.amount || "0.00"}.
-                                        </span>
-                                    ) : (
-                                        <span>
-                                            <strong>Bank to Cash Transfer:</strong> This will simultaneously reduce your <strong>Bank / UPI Balance</strong> and increase physical <strong>Cash in Hand</strong> by ₹{form.amount || "0.00"}.
-                                        </span>
-                                    )}
-                                </div>
+                {/* Balance Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card className="border-slate-800 bg-slate-950 text-white shadow-xl">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-400">Combined Balance</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold font-display text-emerald-400">
+                                ₹{Number(summary.total_balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                             </div>
-                        )}
+                            <p className="text-xs text-slate-400 mt-1">Cash in hand + Bank total</p>
+                        </CardContent>
+                    </Card>
 
-                        {form.category === "bill_payment" && (
-                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                                    Select Pending Supplier Bill
-                                </label>
-                                {pendingBills.length === 0 ? (
-                                    <p className="text-xs text-slate-400 italic">No pending bills found. You can add one under the Suppliers page.</p>
-                                ) : (
-                                    <select
-                                        value={selectedBillId}
-                                        onChange={handleBillSelectChange}
-                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
-                                    >
-                                        <option value="">-- Select Pending Bill --</option>
-                                        {pendingBills.map(b => (
-                                            <option key={b.id} value={b.id}>
-                                                {b.supplier_name} - Bill #{b.bill_number} (Due: {b.due_date || "—"}) · Pending: ₹{b.balance_due.toFixed(2)}
-                                            </option>
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Physical Cash in Drawer</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold font-display text-slate-900 dark:text-slate-100">
+                                ₹{Number(summary.cash_balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Bank / UPI Liquidity</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold font-display text-purple-600 dark:text-purple-400">
+                                ₹{Number(summary.bank_balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Today's Net Flow</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Inflow:</span>
+                                <span className="font-bold text-emerald-600">+₹{Number(summary.today_in).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Outflow:</span>
+                                <span className="font-bold text-red-500">−₹{Number(summary.today_out).toFixed(2)}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Form Dialog / Section */}
+                {showForm && (
+                    <Card className="border-amber-500/30">
+                        <CardHeader>
+                            <CardTitle className="text-base font-bold">New Cash Register Entry</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSave} className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Transaction Type</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {ENTRY_TYPES.map(t => (
+                                            <button
+                                                key={t.value}
+                                                type="button"
+                                                onClick={() => setForm(f => ({ ...f, entry_type: t.value }))}
+                                                className={`py-2 px-3 rounded-xl border text-xs font-semibold transition ${
+                                                    form.entry_type === t.value
+                                                        ? "bg-amber-500 text-slate-950 border-amber-500 font-bold"
+                                                        : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300"
+                                                }`}
+                                            >
+                                                {t.label}
+                                            </button>
                                         ))}
-                                    </select>
-                                )}
-                                {selectedBillId && (() => {
-                                    const selectedBill = pendingBills.find(b => b.id === Number(selectedBillId));
-                                    if (!selectedBill) return null;
-                                    return (
-                                        <div className="text-xs text-slate-500 space-y-1.5 mt-1 bg-white p-3 rounded-xl border border-slate-100">
-                                            <p><strong>Supplier:</strong> {selectedBill.supplier_name} ({selectedBill.supplier_company})</p>
-                                            <p><strong>Total Bill Amount:</strong> ₹{selectedBill.total_amount.toFixed(2)}</p>
-                                            <p><strong>Paid So Far:</strong> ₹{selectedBill.paid_amount.toFixed(2)}</p>
-                                            <p><strong>Remaining Balance:</strong> ₹{selectedBill.balance_due.toFixed(2)}</p>
-                                            <p className="text-emerald-600 font-semibold mt-1">💡 Edit the Amount below to make a partial payment.</p>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="text-xs text-slate-500 font-medium mb-1 block">Description (optional)</label>
-                            <input
-                                id="entry-desc"
-                                type="text"
-                                value={form.description}
-                                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                                placeholder={
-                                    form.category === "daily_sales"  ? "e.g. Cash sales July 11" :
-                                    form.category === "bill_payment" ? "e.g. Paid Kingfisher bill #123" :
-                                    form.category === "expense"      ? "e.g. Electricity bill" :
-                                    form.category === "transfer"     ? "e.g. Transferred weekly cash to account" :
-                                    "Additional details..."
-                                }
-                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
-                            />
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setShowForm(false)}
-                                className="px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium text-sm transition">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={saving}
-                                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-60">
-                                {saving ? "Saving..." : `Save ${TYPE_CONFIG[form.entry_type]?.label}`}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Filters */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4">
-                <div className="flex flex-wrap gap-3 items-end">
-                    <div>
-                        <label className="text-xs text-slate-500 font-medium mb-1 block">Type</label>
-                        <select
-                            value={filterType}
-                            onChange={e => { setFilterType(e.target.value); setPage(1); }}
-                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                        >
-                            <option value="">All Types</option>
-                            {ENTRY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs text-slate-500 font-medium mb-1 block">From</label>
-                        <input type="date" value={filterFrom} onChange={e => { setFilterFrom(e.target.value); setPage(1); }}
-                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                    </div>
-                    <div>
-                        <label className="text-xs text-slate-500 font-medium mb-1 block">To</label>
-                        <input type="date" value={filterTo} onChange={e => { setFilterTo(e.target.value); setPage(1); }}
-                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
-                    </div>
-                    {(filterType || filterFrom || filterTo) && (
-                        <button onClick={clearFilters}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-medium transition">
-                            <FaTimes /> Clear
-                        </button>
-                    )}
-                    <div className="ml-auto text-sm text-slate-400">{pagination.total} entries</div>
-                </div>
-            </div>
-
-            {/* Ledger Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                {loading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
-                    </div>
-                ) : entries.length === 0 ? (
-                    <div className="text-center py-20 text-slate-400">
-                        <FaWallet className="mx-auto text-5xl mb-3 opacity-25" />
-                        <p className="font-medium">No entries yet</p>
-                        <p className="text-sm mt-1">Click "Add Entry" to record your first transaction</p>
-                    </div>
-                ) : (
-                    <>
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100">
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
-                                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
-                                    <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
-                                    <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {entries.map(entry => {
-                                    const cfg = TYPE_CONFIG[entry.entry_type] || TYPE_CONFIG.cash_in;
-                                    const isOut = entry.entry_type.includes("out");
-                                    return (
-                                        <tr key={entry.id} className="hover:bg-slate-50/60 transition-colors group">
-                                            <td className="px-5 py-3.5 text-sm text-slate-500">
-                                                {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-IN", {
-                                                    day: "numeric", month: "short", year: "numeric"
-                                                })}
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.color}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                                    {cfg.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-sm text-slate-500 capitalize">
-                                                {(entry.category || "other").replace("_", " ")}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-sm text-slate-600 max-w-xs truncate">
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span>{entry.description || "—"}</span>
-                                                    {entry.supplier_bill_id && (
-                                                        <span className="text-[10px] bg-slate-100 text-slate-500 w-fit px-1.5 py-0.5 rounded font-medium">
-                                                            Linked Bill Payment
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right">
-                                                <span className={`font-bold ${isOut ? "text-red-500" : "text-emerald-600"}`}>
-                                                    {isOut ? "−" : "+"} ₹{Number(entry.amount).toFixed(2)}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <button
-                                                    onClick={() => setDeleteConfirm(entry)}
-                                                    className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
-                                                    title="Delete"
-                                                >
-                                                    <FaTrash className="text-xs" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-
-                        {/* Pagination */}
-                        {pagination.pages > 1 && (
-                            <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
-                                <p className="text-sm text-slate-500">Page {page} of {pagination.pages}</p>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                                        className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-40 hover:bg-slate-50 transition">
-                                        ← Prev
-                                    </button>
-                                    <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page === pagination.pages}
-                                        className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-40 hover:bg-slate-50 transition">
-                                        Next →
-                                    </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
 
-            {/* Delete Confirm */}
-            {deleteConfirm && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-                        <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FaTrash className="text-red-500 text-xl" />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Entry?</h3>
-                        <p className="text-slate-500 text-sm mb-6">
-                            Remove <strong>{TYPE_CONFIG[deleteConfirm.entry_type]?.label}</strong> of <strong>₹{Number(deleteConfirm.amount).toFixed(2)}</strong>?
-                            <br /><span className="text-xs text-slate-400">This will affect your balance calculations.</span>
-                        </p>
-                        <div className="flex gap-3">
-                            <button onClick={() => setDeleteConfirm(null)}
-                                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition">
-                                Cancel
-                            </button>
-                            <button onClick={handleDelete}
-                                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition">
-                                Delete
-                            </button>
-                        </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</label>
+                                        <select
+                                            value={form.category}
+                                            onChange={e => {
+                                                setForm(f => ({ ...f, category: e.target.value }));
+                                                setSelectedBillId("");
+                                            }}
+                                            className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
+                                        >
+                                            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount (₹)</label>
+                                        <Input
+                                            type="number" step="0.01" min="0.01" required
+                                            placeholder="0.00"
+                                            value={form.amount}
+                                            onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</label>
+                                        <Input
+                                            type="date" required
+                                            value={form.entry_date}
+                                            onChange={e => setForm(f => ({ ...f, entry_date: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                {form.category === "bill_payment" && (
+                                    <div className="space-y-2 p-4 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Link Pending Supplier Bill</label>
+                                        <select
+                                            value={selectedBillId}
+                                            onChange={handleBillSelectChange}
+                                            className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
+                                        >
+                                            <option value="">-- Choose Pending Bill --</option>
+                                            {pendingBills.map(b => (
+                                                <option key={b.id} value={b.id}>
+                                                    {b.supplier_name} - Bill #{b.bill_number} · Due: ₹{b.balance_due.toFixed(2)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Description</label>
+                                    <Input
+                                        type="text"
+                                        placeholder="Optional transaction memo or reference..."
+                                        value={form.description}
+                                        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 justify-end pt-2">
+                                    <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="submit" variant="gradient" disabled={saving} className="text-slate-950 font-bold">
+                                        {saving ? "Processing..." : "Save Entry"}
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+                                <p className="text-sm font-medium">Loading register ledger...</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-center">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {entries.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-16 text-slate-400">
+                                                <Wallet className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                                                <p className="font-semibold">No register entries found</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        entries.map(entry => {
+                                            const cfg = TYPE_CONFIG[entry.entry_type] || TYPE_CONFIG.cash_in;
+                                            return (
+                                                <TableRow key={entry.id}>
+                                                    <TableCell className="text-slate-500 text-xs">
+                                                        {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-IN", {
+                                                            day: "numeric", month: "short", year: "numeric"
+                                                        })}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={cfg.variant}>
+                                                            {cfg.label}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="capitalize text-slate-600 dark:text-slate-300">
+                                                        {(entry.category || "other").replace("_", " ")}
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-600 dark:text-slate-300 max-w-xs truncate">
+                                                        {entry.description || "—"}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-bold">
+                                                        <span className={cfg.isOut ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"}>
+                                                            {cfg.isOut ? "−" : "+"} ₹{Number(entry.amount).toFixed(2)}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setDeleteConfirm(entry)}
+                                                            className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Delete Dialog */}
+                <Dialog
+                    isOpen={!!deleteConfirm}
+                    onClose={() => setDeleteConfirm(null)}
+                    title="Remove Entry"
+                    description={`Permanently remove this ${deleteConfirm?.entry_type} entry of ₹${Number(deleteConfirm?.amount || 0).toFixed(2)}?`}
+                >
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDelete}>Remove Entry</Button>
                     </div>
-                </div>
-            )}
+                </Dialog>
+            </div>
         </AdminLayout>
     );
 }

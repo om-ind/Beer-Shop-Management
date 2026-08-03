@@ -1,26 +1,27 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAdminOverview, getAllShops } from "../services/shopsService";
+import { getAdminOverview } from "../services/shopsService";
 import AdminLayout from "../layouts/AdminLayout";
-import {
-    FaStore, FaUsers, FaRupeeSign, FaChartLine,
-    FaCheckCircle, FaTimesCircle, FaArrowRight, FaShoppingBag
-} from "react-icons/fa";
+import { Building2, Users, IndianRupee, TrendingUp, ShieldCheck, ArrowRight, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
 
-const BASE_LAYOUT = "flex min-h-screen bg-slate-950";
-
-function StatCard({ icon, label, value, sub, color }) {
+function StatCard({ icon: Icon, label, value, sub, color }) {
     return (
-        <div className={`rounded-2xl p-6 bg-slate-800/60 border border-slate-700/50 backdrop-blur flex items-start gap-4 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5`}>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${color}`}>
-                {icon}
-            </div>
-            <div>
-                <p className="text-slate-400 text-sm font-medium">{label}</p>
-                <p className="text-white text-2xl font-bold mt-0.5">{value}</p>
-                {sub && <p className="text-slate-500 text-xs mt-1">{sub}</p>}
-            </div>
-        </div>
+        <Card className="relative overflow-hidden border-slate-800 bg-slate-900 text-white shadow-xl">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</CardTitle>
+                <div className={`p-2 rounded-xl text-white ${color}`}>
+                    <Icon className="h-4 w-4" />
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold font-display text-white tracking-tight">{value}</div>
+                {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+            </CardContent>
+        </Card>
     );
 }
 
@@ -41,8 +42,9 @@ export default function AdminDashboard() {
     if (loading) {
         return (
             <AdminLayout>
-                <div className="flex-1 flex items-center justify-center bg-slate-950 text-slate-400 text-lg">
-                    Loading Admin Dashboard…
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                    <p className="text-sm font-medium">Loading Admin Master Console...</p>
                 </div>
             </AdminLayout>
         );
@@ -50,122 +52,109 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout>
-        <div className="flex-1 p-8 bg-slate-950 min-h-screen overflow-auto">
-
-            {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center gap-3 mb-1">
-                    <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white text-lg">
-                        🔐
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-600/20 text-purple-400">
+                        <ShieldCheck className="h-6 w-6" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-                        <p className="text-slate-400 text-sm">Global overview across all shops</p>
+                        <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-white">
+                            Global Admin Console
+                        </h1>
+                        <p className="text-slate-400 text-sm mt-0.5">
+                            Cross-tenant shop monitoring and revenue breakdown
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-                <StatCard
-                    icon={<FaStore />}
-                    label="Active Shops"
-                    value={overview?.total_shops ?? 0}
-                    sub="Registered & active"
-                    color="bg-purple-500/20 text-purple-400"
-                />
-                <StatCard
-                    icon={<FaUsers />}
-                    label="Total Users"
-                    value={overview?.total_users ?? 0}
-                    sub="Across all shops"
-                    color="bg-blue-500/20 text-blue-400"
-                />
-                <StatCard
-                    icon={<FaRupeeSign />}
-                    label="Total Revenue"
-                    value={fmt(overview?.total_revenue)}
-                    sub="All time"
-                    color="bg-emerald-500/20 text-emerald-400"
-                />
-                <StatCard
-                    icon={<FaChartLine />}
-                    label="Total Sales"
-                    value={(overview?.total_sales ?? 0).toLocaleString()}
-                    sub="Transactions"
-                    color="bg-amber-500/20 text-amber-400"
-                />
-            </div>
-
-            {/* Shop Breakdown Table */}
-            <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl backdrop-blur">
-                <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-                    <h2 className="text-white font-semibold flex items-center gap-2">
-                        <FaShoppingBag className="text-purple-400" /> Shop Revenue Breakdown
-                    </h2>
-                    <button
-                        onClick={() => navigate("/admin/shops")}
-                        className="flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm font-medium transition"
-                    >
-                        Manage Shops <FaArrowRight />
-                    </button>
+                {/* KPI Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                        icon={Building2}
+                        label="Active Shops"
+                        value={overview?.total_shops ?? 0}
+                        sub="Tenant stores"
+                        color="bg-purple-600"
+                    />
+                    <StatCard
+                        icon={Users}
+                        label="Total Users"
+                        value={overview?.total_users ?? 0}
+                        sub="Registered accounts"
+                        color="bg-blue-600"
+                    />
+                    <StatCard
+                        icon={IndianRupee}
+                        label="Global Revenue"
+                        value={fmt(overview?.total_revenue)}
+                        sub="All time across shops"
+                        color="bg-emerald-600"
+                    />
+                    <StatCard
+                        icon={TrendingUp}
+                        label="Transactions"
+                        value={(overview?.total_sales ?? 0).toLocaleString()}
+                        sub="Completed sales"
+                        color="bg-amber-600"
+                    />
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="text-left text-slate-400 text-xs border-b border-slate-700">
-                                <th className="px-6 py-3 font-medium">#</th>
-                                <th className="px-6 py-3 font-medium">Shop Name</th>
-                                <th className="px-6 py-3 font-medium">Status</th>
-                                <th className="px-6 py-3 font-medium">Sales</th>
-                                <th className="px-6 py-3 font-medium text-right">Revenue</th>
-                                <th className="px-6 py-3 font-medium"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(overview?.shop_breakdown || []).map((shop, idx) => (
-                                <tr
-                                    key={shop.id}
-                                    className="border-b border-slate-700/50 hover:bg-slate-700/30 transition"
-                                >
-                                    <td className="px-6 py-4 text-slate-400 text-sm">{idx + 1}</td>
-                                    <td className="px-6 py-4 text-white font-medium">{shop.name}</td>
-                                    <td className="px-6 py-4">
-                                        {shop.is_active ? (
-                                            <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/15 text-emerald-400 px-2 py-1 rounded-full">
-                                                <FaCheckCircle /> Active
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1 text-xs bg-red-500/15 text-red-400 px-2 py-1 rounded-full">
-                                                <FaTimesCircle /> Inactive
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-300">{shop.sales_count}</td>
-                                    <td className="px-6 py-4 text-emerald-400 font-semibold text-right">{fmt(shop.revenue)}</td>
-                                    <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => navigate("/admin/shops")}
-                                            className="text-xs text-purple-400 hover:text-purple-300 transition font-medium"
-                                        >
-                                            View →
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {(!overview?.shop_breakdown?.length) && (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center text-slate-500 text-sm">
-                                        No shops found. Create a shop to get started.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                {/* Table */}
+                <Card className="border-slate-800 bg-slate-900 text-white">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <CardTitle className="text-base font-bold">Shop Performance Breakdown</CardTitle>
+                        <Button variant="ghost" onClick={() => navigate("/admin/shops")} className="text-purple-400 hover:text-purple-300">
+                            Manage All Shops <ArrowRight className="h-4 w-4 ml-1" />
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="border-slate-800">
+                                    <TableHead className="text-slate-400">#</TableHead>
+                                    <TableHead className="text-slate-400">Shop Name</TableHead>
+                                    <TableHead className="text-slate-400">Status</TableHead>
+                                    <TableHead className="text-slate-400">Total Sales</TableHead>
+                                    <TableHead className="text-right text-slate-400">Revenue</TableHead>
+                                    <TableHead className="text-center text-slate-400">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {(overview?.shop_breakdown || []).map((shop, idx) => (
+                                    <TableRow key={shop.id} className="border-slate-800 hover:bg-slate-800/50">
+                                        <TableCell className="text-slate-500 text-xs">{idx + 1}</TableCell>
+                                        <TableCell className="font-bold text-white">{shop.name}</TableCell>
+                                        <TableCell>
+                                            {shop.is_active ? (
+                                                <Badge variant="success" className="gap-1 text-[11px]">
+                                                    <CheckCircle2 className="h-3 w-3" /> Active
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="destructive" className="gap-1 text-[11px]">
+                                                    <XCircle className="h-3 w-3" /> Suspended
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-slate-300">{shop.sales_count}</TableCell>
+                                        <TableCell className="text-right font-bold text-emerald-400">{fmt(shop.revenue)}</TableCell>
+                                        <TableCell className="text-center">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => navigate("/admin/shops")}
+                                                className="text-purple-400 hover:text-purple-300"
+                                            >
+                                                Details
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </div>
-        </div>
         </AdminLayout>
     );
 }

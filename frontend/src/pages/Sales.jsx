@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
 import InvoiceModal from "../components/Sales/InvoiceModal";
 import Receipt from "../components/Sales/Receipt";
 import ProductSearch from "../components/Sales/ProductSearch";
@@ -8,17 +7,20 @@ import SearchResults from "../components/Sales/SearchResults";
 import CartTable from "../components/Sales/CartTable";
 import SalesHistory from "../components/Sales/SalesHistory";
 import { toast } from "react-toastify";
-import { FaShoppingCart, FaHistory, FaTrash } from "react-icons/fa";
+import { ShoppingCart, History, Trash2, CheckCircle2, AlertTriangle, CreditCard, Wallet, QrCode, User } from "lucide-react";
 import { searchProducts, createSale } from "../services/salesService";
 import { getCustomers } from "../services/customerService";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
 
-const PAYMENT_MODES = ["Cash", "Card", "UPI", "Credit"];
-const PAYMENT_COLORS = {
-    Cash: "bg-green-50 border-green-200 text-green-700",
-    Card: "bg-blue-50 border-blue-200 text-blue-700",
-    UPI: "bg-violet-50 border-violet-200 text-violet-700",
-    Credit: "bg-amber-50 border-amber-200 text-amber-700",
-};
+const PAYMENT_MODES = [
+    { mode: "Cash", icon: Wallet, style: "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-400" },
+    { mode: "Card", icon: CreditCard, style: "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-900 dark:text-blue-400" },
+    { mode: "UPI", icon: QrCode, style: "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-950/40 dark:border-purple-900 dark:text-purple-400" },
+    { mode: "Credit", icon: User, style: "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-400" },
+];
 
 export default function Sales() {
     const today = () => new Date().toISOString().slice(0, 10);
@@ -152,207 +154,237 @@ export default function Sales() {
 
     return (
         <AdminLayout>
-            <Navbar />
-
-            {/* Tabs */}
-            <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-fit">
-                <button
-                    id="pos-tab"
-                    onClick={() => setActiveTab("pos")}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        activeTab === "pos"
-                            ? "bg-white text-slate-800 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                    <FaShoppingCart /> Point of Sale
-                    {cart.length > 0 && (
-                        <span className="bg-emerald-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                            {itemCount}
-                        </span>
-                    )}
-                </button>
-                <button
-                    id="history-tab"
-                    onClick={() => setActiveTab("history")}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        activeTab === "history"
-                            ? "bg-white text-slate-800 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                    <FaHistory /> Sales History
-                </button>
-            </div>
-
-            {activeTab === "pos" && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    {/* Left — Search + Cart */}
-                    <div className="xl:col-span-2 space-y-4">
-
-                        {/* Product Search */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Search Product</h2>
-                            <ProductSearch keyword={keyword} onSearch={handleSearch} />
-                            <SearchResults products={products} onSelect={addToCart} />
-                        </div>
-
-                        {/* Cart */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
-                                    Cart ({itemCount} items)
-                                </h2>
-                                {cart.length > 0 && (
-                                    <button
-                                        onClick={() => setCart([])}
-                                        className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition"
-                                    >
-                                        <FaTrash /> Clear
-                                    </button>
-                                )}
-                            </div>
-                            <CartTable
-                                cart={cart}
-                                increaseQty={increaseQty}
-                                decreaseQty={decreaseQty}
-                                removeItem={removeItem}
-                                updateQty={updateQty}
-                                updatePrice={updatePrice}
-                            />
-                        </div>
+            <div className="space-y-6">
+                {/* Header & Tabs */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                            Point of Sale (POS)
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                            Process quick retail sales and view transaction history
+                        </p>
                     </div>
 
-                    {/* Right — Order Summary */}
-                    <div className="space-y-4">
-                        {/* Customer */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Customer</h2>
-                            <select
-                                id="customer-select"
-                                value={selectedCustomer}
-                                onChange={e => setSelectedCustomer(Number(e.target.value))}
-                                className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 text-slate-700"
-                            >
-                                {customers.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Sale Date */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Sale Date</h2>
-                            <input
-                                id="sale-date-input"
-                                type="date"
-                                value={saleDate}
-                                onChange={e => setSaleDate(e.target.value)}
-                                className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 text-slate-700 font-semibold"
-                            />
-                        </div>
-
-                        {/* Payment Mode */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Payment Mode</h2>
-                            <div className="grid grid-cols-2 gap-2">
-                                {PAYMENT_MODES.map(mode => (
-                                    <button
-                                        key={mode}
-                                        id={`payment-${mode.toLowerCase()}`}
-                                        onClick={() => setPaymentMode(mode)}
-                                        className={`py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                                            paymentMode === mode
-                                                ? PAYMENT_COLORS[mode] + " shadow-sm"
-                                                : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                                        }`}
-                                    >
-                                        {mode}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Order Total */}
-                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white">
-                            <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-4">Order Summary</h2>
-
-                            {/* Credit warning */}
-                            {paymentMode === "Credit" && (() => {
-                                const cust = customers.find(c => c.id === selectedCustomer);
-                                const bal = Number(cust?.credit_balance || 0);
-                                return bal > 0 ? (
-                                    <div className="mb-4 px-3 py-2.5 bg-red-500/20 border border-red-400/30 rounded-xl">
-                                        <p className="text-red-300 text-xs font-semibold">⚠ Outstanding Credit</p>
-                                        <p className="text-red-200 text-sm font-bold mt-0.5">₹{bal.toFixed(2)} already owed</p>
-                                    </div>
-                                ) : (
-                                    <div className="mb-4 px-3 py-2.5 bg-emerald-500/10 border border-emerald-400/20 rounded-xl">
-                                        <p className="text-emerald-300 text-xs font-semibold">✓ No outstanding balance</p>
-                                    </div>
-                                );
-                            })()}
-
-                            <div className="space-y-2 mb-4">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-slate-400">Subtotal ({itemCount} items)</span>
-                                    <span className="text-slate-200">₹{total.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-slate-400">Tax</span>
-                                    <span className="text-slate-200">Included</span>
-                                </div>
-                                <div className="h-px bg-slate-700 my-2" />
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-300 font-semibold">Grand Total</span>
-                                    <span className="text-2xl font-bold text-emerald-400">₹{total.toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <button
-                                id="checkout-btn"
-                                onClick={handleCheckout}
-                                disabled={cart.length === 0 || processing}
-                                className="w-full py-3.5 rounded-xl font-bold text-sm transition-all
-                                    bg-gradient-to-r from-emerald-500 to-teal-500
-                                    hover:from-emerald-600 hover:to-teal-600
-                                    disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed
-                                    shadow-lg shadow-emerald-600/20"
-                            >
-                                {processing ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Processing...
-                                    </span>
-                                ) : (
-                                    `✓ Complete Sale — ₹${total.toFixed(2)}`
-                                )}
-                            </button>
-                        </div>
+                    <div className="flex gap-1 bg-slate-200/60 dark:bg-slate-900 p-1 rounded-2xl w-fit">
+                        <Button
+                            id="pos-tab"
+                            variant={activeTab === "pos" ? "default" : "ghost"}
+                            onClick={() => setActiveTab("pos")}
+                            className="rounded-xl"
+                        >
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            <span>POS Terminal</span>
+                            {cart.length > 0 && (
+                                <Badge variant="warning" className="ml-2 px-1.5 py-0 text-[10px] rounded-full">
+                                    {itemCount}
+                                </Badge>
+                            )}
+                        </Button>
+                        <Button
+                            id="history-tab"
+                            variant={activeTab === "history" ? "default" : "ghost"}
+                            onClick={() => setActiveTab("history")}
+                            className="rounded-xl"
+                        >
+                            <History className="h-4 w-4 mr-2" />
+                            <span>Sales History</span>
+                        </Button>
                     </div>
                 </div>
-            )}
 
-            {activeTab === "history" && <SalesHistory />}
+                {activeTab === "pos" && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left — Search & Cart */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Product Search */}
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Search Catalog</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <ProductSearch keyword={keyword} onSearch={handleSearch} />
+                                    <SearchResults products={products} onSelect={addToCart} />
+                                </CardContent>
+                            </Card>
 
-            {/* Invoice Modal */}
-            {showInvoice && (
-                <InvoiceModal
+                            {/* Cart Table */}
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">
+                                        Current Cart ({itemCount} items)
+                                    </CardTitle>
+                                    {cart.length > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setCart([])}
+                                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-1" />
+                                            <span>Clear Cart</span>
+                                        </Button>
+                                    )}
+                                </CardHeader>
+                                <CardContent>
+                                    <CartTable
+                                        cart={cart}
+                                        increaseQty={increaseQty}
+                                        decreaseQty={decreaseQty}
+                                        removeItem={removeItem}
+                                        updateQty={updateQty}
+                                        updatePrice={updatePrice}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Right — Checkout Panel */}
+                        <div className="space-y-6">
+                            {/* Customer Select */}
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Customer Details</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <select
+                                        id="customer-select"
+                                        value={selectedCustomer}
+                                        onChange={e => setSelectedCustomer(Number(e.target.value))}
+                                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                                    >
+                                        {customers.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </CardContent>
+                            </Card>
+
+                            {/* Sale Date */}
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Sale Date</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Input
+                                        id="sale-date-input"
+                                        type="date"
+                                        value={saleDate}
+                                        onChange={e => setSaleDate(e.target.value)}
+                                        className="font-semibold"
+                                    />
+                                </CardContent>
+                            </Card>
+
+                            {/* Payment Mode */}
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Payment Mode</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {PAYMENT_MODES.map(({ mode, icon: Icon, style }) => (
+                                            <button
+                                                key={mode}
+                                                id={`payment-${mode.toLowerCase()}`}
+                                                onClick={() => setPaymentMode(mode)}
+                                                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                                                    paymentMode === mode
+                                                        ? `${style} shadow-sm font-bold`
+                                                        : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-900"
+                                                }`}
+                                            >
+                                                <Icon className="h-4 w-4" />
+                                                <span>{mode}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Order Total & Checkout Action */}
+                            <Card className="border-slate-800 bg-slate-950 text-white shadow-2xl">
+                                <CardHeader>
+                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-400">Order Summary</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {paymentMode === "Credit" && (() => {
+                                        const cust = customers.find(c => c.id === selectedCustomer);
+                                        const bal = Number(cust?.credit_balance || 0);
+                                        return bal > 0 ? (
+                                            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs">
+                                                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                                                <div>
+                                                    <span className="font-semibold">Outstanding Credit: </span>
+                                                    <span>₹{bal.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs">
+                                                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                                                <span>No previous credit balance</span>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Items ({itemCount})</span>
+                                            <span className="text-slate-200">₹{total.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Taxes</span>
+                                            <span className="text-slate-200">Included</span>
+                                        </div>
+                                        <div className="h-px bg-slate-800 my-2" />
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-bold text-slate-200">Grand Total</span>
+                                            <span className="text-2xl font-bold font-display text-emerald-400">
+                                                ₹{total.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        id="checkout-btn"
+                                        variant="gradient"
+                                        disabled={cart.length === 0 || processing}
+                                        onClick={handleCheckout}
+                                        className="w-full h-12 text-slate-950 font-bold text-base shadow-lg shadow-amber-500/20"
+                                    >
+                                        {processing ? (
+                                            "Processing Transaction..."
+                                        ) : (
+                                            `Complete Sale — ₹${total.toFixed(2)}`
+                                        )}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "history" && <SalesHistory />}
+
+                {/* Invoice Modal */}
+                {showInvoice && (
+                    <InvoiceModal
+                        invoice={invoiceNo}
+                        total={receiptItems.reduce((s, i) => s + i.quantity * Number(i.selling_price), 0)}
+                        customer={customers.find(c => c.id === selectedCustomer)?.name}
+                        payment={paymentMode}
+                        onClose={() => setShowInvoice(false)}
+                    />
+                )}
+
+                <Receipt
                     invoice={invoiceNo}
-                    total={receiptItems.reduce((s, i) => s + i.quantity * Number(i.selling_price), 0)}
-                    customer={customers.find(c => c.id === selectedCustomer)?.name}
+                    customer={customers.find(c => c.id === selectedCustomer)?.name || "Walk-in Customer"}
                     payment={paymentMode}
-                    onClose={() => setShowInvoice(false)}
+                    items={receiptItems}
+                    total={receiptItems.reduce((s, i) => s + i.quantity * Number(i.selling_price), 0)}
                 />
-            )}
-
-            <Receipt
-                invoice={invoiceNo}
-                customer={customers.find(c => c.id === selectedCustomer)?.name || "Walk-in Customer"}
-                payment={paymentMode}
-                items={receiptItems}
-                total={receiptItems.reduce((s, i) => s + i.quantity * Number(i.selling_price), 0)}
-            />
+            </div>
         </AdminLayout>
     );
 }

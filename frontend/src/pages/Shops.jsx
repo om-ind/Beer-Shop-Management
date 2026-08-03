@@ -2,230 +2,28 @@ import { useEffect, useState } from "react";
 import { getAllShops, createShop, updateShop, deactivateShop, getShopStats } from "../services/shopsService";
 import { toast } from "react-toastify";
 import AdminLayout from "../layouts/AdminLayout";
-import {
-    FaStore, FaPlus, FaEdit, FaTrash, FaCheckCircle,
-    FaTimesCircle, FaTimes, FaUsers, FaRupeeSign, FaShoppingBag,
-    FaPhone, FaMapMarkerAlt, FaUser, FaEye, FaChartBar
-} from "react-icons/fa";
+import { Building2, Plus, Edit3, CheckCircle2, XCircle, Eye, Users, Phone, MapPin, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Dialog } from "../components/ui/dialog";
 
-// ─────────────────────────────────
-// Create Shop Modal
-// ─────────────────────────────────
-function CreateShopModal({ onClose, onCreated }) {
-    const [form, setForm] = useState({
-        name: "", address: "", phone: "", owner_name: "",
-        owner_username: "", owner_password: ""
-    });
-    const [saving, setSaving] = useState(false);
-
-    function handleChange(e) {
-        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        setSaving(true);
-        try {
-            const res = await createShop(form);
-            if (res.success) {
-                toast.success(res.message);
-                onCreated();
-                onClose();
-            } else {
-                toast.error(res.message);
-            }
-        } catch {
-            toast.error("Something went wrong");
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    const inputCls = "w-full bg-slate-700/60 border border-slate-600 rounded-xl px-4 py-2.5 text-white text-sm placeholder-slate-400 focus:outline-none focus:border-purple-500 transition";
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-                    <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                        <FaStore className="text-purple-400" /> Create New Shop
-                    </h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white transition"><FaTimes /></button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">Shop Details</p>
-                        <div className="space-y-3">
-                            <input name="name" placeholder="Shop Name *" value={form.name} onChange={handleChange} className={inputCls} required />
-                            <input name="address" placeholder="Address" value={form.address} onChange={handleChange} className={inputCls} />
-                            <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} className={inputCls} />
-                            <input name="owner_name" placeholder="Owner Full Name" value={form.owner_name} onChange={handleChange} className={inputCls} />
-                        </div>
-                    </div>
-
-                    <div>
-                        <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">Owner Login Credentials</p>
-                        <div className="space-y-3">
-                            <input name="owner_username" placeholder="Owner Username *" value={form.owner_username} onChange={handleChange} className={inputCls} required />
-                            <input name="owner_password" type="password" placeholder="Owner Password * (min 6 chars)" value={form.owner_password} onChange={handleChange} className={inputCls} required minLength={6} />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 transition text-sm font-medium">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium text-sm transition disabled:opacity-60">
-                            {saving ? "Creating…" : "Create Shop"}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────
-// Edit Shop Modal
-// ─────────────────────────────────
-function EditShopModal({ shop, onClose, onSaved }) {
-    const [form, setForm] = useState({
-        name: shop.name, address: shop.address || "", phone: shop.phone || "", owner_name: shop.owner_name || ""
-    });
-    const [saving, setSaving] = useState(false);
-
-    function handleChange(e) {
-        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    }
-
-    async function handleSubmit(e) {
-        e.preventDefault();
-        setSaving(true);
-        try {
-            const res = await updateShop(shop.id, form);
-            if (res.success) {
-                toast.success("Shop updated");
-                onSaved();
-                onClose();
-            } else {
-                toast.error(res.message);
-            }
-        } catch {
-            toast.error("Something went wrong");
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    const inputCls = "w-full bg-slate-700/60 border border-slate-600 rounded-xl px-4 py-2.5 text-white text-sm placeholder-slate-400 focus:outline-none focus:border-purple-500 transition";
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-                    <h2 className="text-white font-bold text-lg flex items-center gap-2"><FaEdit className="text-blue-400" /> Edit Shop</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white transition"><FaTimes /></button>
-                </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-3">
-                    <input name="name" placeholder="Shop Name *" value={form.name} onChange={handleChange} className={inputCls} required />
-                    <input name="address" placeholder="Address" value={form.address} onChange={handleChange} className={inputCls} />
-                    <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} className={inputCls} />
-                    <input name="owner_name" placeholder="Owner Name" value={form.owner_name} onChange={handleChange} className={inputCls} />
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 transition text-sm font-medium">Cancel</button>
-                        <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition disabled:opacity-60">{saving ? "Saving…" : "Save Changes"}</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────
-// Shop Stats Drawer
-// ─────────────────────────────────
-function ShopStatsDrawer({ shop, onClose }) {
-    const [stats, setStats] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        getShopStats(shop.id)
-            .then(setStats)
-            .catch(() => {})
-            .finally(() => setLoading(false));
-    }, [shop.id]);
-
-    const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-                    <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                        <FaStore className="text-purple-400" /> {shop.name}
-                    </h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white transition"><FaTimes /></button>
-                </div>
-
-                {loading ? (
-                    <div className="p-8 text-center text-slate-400">Loading…</div>
-                ) : (
-                    <div className="p-6 space-y-5">
-                        <div className="grid grid-cols-2 gap-3">
-                            {[
-                                { label: "Products", value: stats?.total_products || 0, icon: <FaShoppingBag />, color: "text-blue-400" },
-                                { label: "Customers", value: stats?.total_customers || 0, icon: <FaUsers />, color: "text-emerald-400" },
-                                { label: "Total Revenue", value: fmt(stats?.total_revenue), icon: <FaRupeeSign />, color: "text-amber-400" },
-                                { label: "Total Profit", value: fmt(stats?.total_profit), icon: <FaChartBar />, color: "text-purple-400" },
-                            ].map(s => (
-                                <div key={s.label} className="bg-slate-700/50 rounded-xl p-4">
-                                    <p className={`text-lg ${s.color}`}>{s.icon}</p>
-                                    <p className="text-white font-bold text-lg mt-1">{s.value}</p>
-                                    <p className="text-slate-400 text-xs">{s.label}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div>
-                            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Users</p>
-                            <div className="space-y-2">
-                                {(stats?.users || []).map(u => (
-                                    <div key={u.id} className="flex items-center justify-between bg-slate-700/50 rounded-xl px-4 py-2.5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-white text-xs font-bold">
-                                                {u.full_name?.charAt(0) || "?"}
-                                            </div>
-                                            <div>
-                                                <p className="text-white text-sm font-medium">{u.full_name || u.username}</p>
-                                                <p className="text-slate-400 text-xs">@{u.username}</p>
-                                            </div>
-                                        </div>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === "Owner" ? "bg-yellow-500/20 text-yellow-400" : u.role === "Manager" ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400"}`}>
-                                            {u.role}
-                                        </span>
-                                    </div>
-                                ))}
-                                {!stats?.users?.length && <p className="text-slate-500 text-sm text-center py-2">No users found</p>}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────
-// Main Shops Page
-// ─────────────────────────────────
 export default function Shops() {
     const [shops, setShops] = useState([]);
     const [loading, setLoading] = useState(true);
     const [createOpen, setCreateOpen] = useState(false);
     const [editShop, setEditShop] = useState(null);
     const [viewShop, setViewShop] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(false);
     const [search, setSearch] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    const [form, setForm] = useState({
+        name: "", address: "", phone: "", owner_name: "",
+        owner_username: "", owner_password: ""
+    });
 
     async function fetchShops() {
         setLoading(true);
@@ -240,6 +38,67 @@ export default function Shops() {
     }
 
     useEffect(() => { fetchShops(); }, []);
+
+    function handleOpenCreate() {
+        setForm({ name: "", address: "", phone: "", owner_name: "", owner_username: "", owner_password: "" });
+        setCreateOpen(true);
+    }
+
+    function handleOpenEdit(shop) {
+        setEditShop(shop);
+        setForm({ name: shop.name, address: shop.address || "", phone: shop.phone || "", owner_name: shop.owner_name || "", owner_username: "", owner_password: "" });
+    }
+
+    async function handleOpenView(shop) {
+        setViewShop(shop);
+        setStatsLoading(true);
+        try {
+            const res = await getShopStats(shop.id);
+            setStats(res);
+        } catch {
+            toast.error("Failed to load shop stats");
+        } finally {
+            setStatsLoading(false);
+        }
+    }
+
+    async function handleCreateSubmit(e) {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const res = await createShop(form);
+            if (res.success) {
+                toast.success(res.message);
+                setCreateOpen(false);
+                fetchShops();
+            } else {
+                toast.error(res.message);
+            }
+        } catch {
+            toast.error("Creation failed");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleEditSubmit(e) {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const res = await updateShop(editShop.id, form);
+            if (res.success) {
+                toast.success("Shop updated");
+                setEditShop(null);
+                fetchShops();
+            } else {
+                toast.error(res.message);
+            }
+        } catch {
+            toast.error("Update failed");
+        } finally {
+            setSaving(false);
+        }
+    }
 
     async function handleToggleActive(shop) {
         const label = shop.is_active ? "deactivate" : "reactivate";
@@ -259,7 +118,7 @@ export default function Shops() {
                 toast.error(res.message);
             }
         } catch {
-            toast.error("Something went wrong");
+            toast.error("Operation failed");
         }
     }
 
@@ -270,135 +129,206 @@ export default function Shops() {
 
     return (
         <AdminLayout>
-        <div className="flex-1 p-8 bg-slate-950 min-h-screen overflow-auto">
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-600/20 text-purple-400">
+                            <Building2 className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-white">
+                                Shops Directory
+                            </h1>
+                            <p className="text-slate-400 text-sm mt-0.5">
+                                Multi-tenant beer shop account management
+                            </p>
+                        </div>
+                    </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <FaStore className="text-purple-400" /> All Shops
-                    </h1>
-                    <p className="text-slate-400 text-sm mt-1">Manage all registered beer shops</p>
+                    <Button variant="gradient" onClick={handleOpenCreate} className="text-slate-950 font-bold">
+                        <Plus className="h-4 w-4 mr-2" />
+                        <span>Add New Shop</span>
+                    </Button>
                 </div>
-                <button
-                    onClick={() => setCreateOpen(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium text-sm shadow-lg shadow-purple-600/30 transition"
-                >
-                    <FaPlus /> New Shop
-                </button>
-            </div>
 
-            {/* Search */}
-            <div className="mb-5">
-                <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by shop name or owner…"
-                    className="w-full max-w-sm bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm placeholder-slate-400 focus:outline-none focus:border-purple-500 transition"
-                />
-            </div>
+                {/* Search */}
+                <Card className="border-slate-800 bg-slate-900">
+                    <CardContent className="p-4">
+                        <Input
+                            placeholder="Filter shops by name or owner name..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="bg-slate-950 border-slate-800 text-white"
+                        />
+                    </CardContent>
+                </Card>
 
-            {/* Shops Grid */}
-            {loading ? (
-                <div className="text-center text-slate-400 py-20">Loading shops…</div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {filtered.map(shop => (
-                        <div key={shop.id} className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 backdrop-blur shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex flex-col gap-4">
-
-                            {/* Top Row */}
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-purple-600/20 flex items-center justify-center text-purple-400 text-lg">
-                                        🍺
-                                    </div>
+                {/* Grid */}
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                        <p className="text-sm font-medium">Fetching registered shops...</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filtered.map(shop => (
+                            <Card key={shop.id} className="border-slate-800 bg-slate-900 text-white flex flex-col justify-between">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0">
                                     <div>
-                                        <h3 className="text-white font-semibold text-base">{shop.name}</h3>
-                                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${shop.is_active ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
-                                            {shop.is_active ? "Active" : "Inactive"}
-                                        </span>
+                                        <CardTitle className="text-lg font-bold text-white">{shop.name}</CardTitle>
+                                        <p className="text-xs text-slate-400">ID #{shop.id}</p>
                                     </div>
-                                </div>
-                                <span className="text-slate-500 text-xs">#{shop.id}</span>
-                            </div>
+                                    {shop.is_active ? (
+                                        <Badge variant="success" className="gap-1">
+                                            <CheckCircle2 className="h-3 w-3" /> Active
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="destructive" className="gap-1">
+                                            <XCircle className="h-3 w-3" /> Inactive
+                                        </Badge>
+                                    )}
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-1.5 text-xs text-slate-300">
+                                        {shop.owner_name && (
+                                            <div className="flex items-center gap-2">
+                                                <Users className="h-3.5 w-3.5 text-slate-500" />
+                                                <span>Owner: {shop.owner_name}</span>
+                                            </div>
+                                        )}
+                                        {shop.phone && (
+                                            <div className="flex items-center gap-2">
+                                                <Phone className="h-3.5 w-3.5 text-slate-500" />
+                                                <span>{shop.phone}</span>
+                                            </div>
+                                        )}
+                                        {shop.address && (
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="h-3.5 w-3.5 text-slate-500" />
+                                                <span className="truncate">{shop.address}</span>
+                                            </div>
+                                        )}
+                                    </div>
 
-                            {/* Details */}
+                                    <div className="flex gap-2 pt-2">
+                                        <Button size="sm" variant="outline" onClick={() => handleOpenView(shop)} className="flex-1 text-xs">
+                                            <Eye className="h-3.5 w-3.5 mr-1" /> Stats
+                                        </Button>
+                                        <Button size="sm" variant="secondary" onClick={() => handleOpenEdit(shop)} className="flex-1 text-xs">
+                                            <Edit3 className="h-3.5 w-3.5 mr-1" /> Edit
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant={shop.is_active ? "destructive" : "default"}
+                                            onClick={() => handleToggleActive(shop)}
+                                            className="flex-1 text-xs"
+                                        >
+                                            {shop.is_active ? "Disable" : "Enable"}
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+
+                {/* Create Modal */}
+                <Dialog isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Register New Shop Tenant">
+                    <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Shop Name</label>
+                            <Input required placeholder="e.g. Royal Beer Shop" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</label>
+                            <Input placeholder="Shop address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</label>
+                            <Input placeholder="Mobile number" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Owner Full Name</label>
+                            <Input placeholder="Owner full name" value={form.owner_name} onChange={e => setForm(f => ({ ...f, owner_name: e.target.value }))} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 pt-2">
                             <div className="space-y-1.5">
-                                {shop.owner_name && (
-                                    <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                        <FaUser className="text-xs flex-shrink-0" /> {shop.owner_name}
-                                    </div>
-                                )}
-                                {shop.phone && (
-                                    <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                        <FaPhone className="text-xs flex-shrink-0" /> {shop.phone}
-                                    </div>
-                                )}
-                                {shop.address && (
-                                    <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                        <FaMapMarkerAlt className="text-xs flex-shrink-0" /> {shop.address}
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                    <FaUsers className="text-xs flex-shrink-0" /> {shop.user_count} user{shop.user_count !== 1 ? "s" : ""}
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Owner Username</label>
+                                <Input required placeholder="Login username" value={form.owner_username} onChange={e => setForm(f => ({ ...f, owner_username: e.target.value }))} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Owner Password</label>
+                                <Input required minLength={6} type="password" placeholder="Min 6 chars" value={form.owner_password} onChange={e => setForm(f => ({ ...f, owner_password: e.target.value }))} />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 justify-end pt-3">
+                            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                            <Button type="submit" variant="gradient" disabled={saving} className="text-slate-950 font-bold">
+                                {saving ? "Creating..." : "Create Tenant"}
+                            </Button>
+                        </div>
+                    </form>
+                </Dialog>
+
+                {/* Edit Modal */}
+                <Dialog isOpen={!!editShop} onClose={() => setEditShop(null)} title={`Edit Shop — ${editShop?.name}`}>
+                    <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Shop Name</label>
+                            <Input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</label>
+                            <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</label>
+                            <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                        </div>
+                        <div className="flex gap-3 justify-end pt-3">
+                            <Button type="button" variant="outline" onClick={() => setEditShop(null)}>Cancel</Button>
+                            <Button type="submit" variant="gradient" disabled={saving} className="text-slate-950 font-bold">
+                                {saving ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </div>
+                    </form>
+                </Dialog>
+
+                {/* Stats Dialog */}
+                <Dialog isOpen={!!viewShop} onClose={() => setViewShop(null)} title={`Shop Analytics — ${viewShop?.name}`}>
+                    <div className="space-y-4 pt-2">
+                        {statsLoading ? (
+                            <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
+                                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                                <span>Computing tenant analytics...</span>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900">
+                                    <span className="text-slate-400 font-bold uppercase block">Products</span>
+                                    <span className="text-lg font-bold">{stats?.total_products || 0}</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900">
+                                    <span className="text-slate-400 font-bold uppercase block">Customers</span>
+                                    <span className="text-lg font-bold">{stats?.total_customers || 0}</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900">
+                                    <span className="text-slate-400 font-bold uppercase block">Revenue</span>
+                                    <span className="text-lg font-bold text-emerald-600">₹{Number(stats?.total_revenue || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900">
+                                    <span className="text-slate-400 font-bold uppercase block">Profit</span>
+                                    <span className="text-lg font-bold text-purple-600">₹{Number(stats?.total_profit || 0).toFixed(2)}</span>
                                 </div>
                             </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-2 mt-auto">
-                                <button
-                                    onClick={() => setViewShop(shop)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
-                                >
-                                    <FaEye /> View Stats
-                                </button>
-                                <button
-                                    onClick={() => setEditShop(shop)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-medium transition"
-                                >
-                                    <FaEdit /> Edit
-                                </button>
-                                <button
-                                    onClick={() => handleToggleActive(shop)}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition ${shop.is_active ? "bg-red-500/10 hover:bg-red-500/20 text-red-400" : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400"}`}
-                                >
-                                    {shop.is_active ? <><FaTimesCircle /> Deactivate</> : <><FaCheckCircle /> Reactivate</>}
-                                </button>
-                            </div>
+                        )}
+                        <div className="flex justify-end pt-2">
+                            <Button variant="outline" onClick={() => setViewShop(null)}>Close</Button>
                         </div>
-                    ))}
-
-                    {!filtered.length && !loading && (
-                        <div className="col-span-3 text-center text-slate-500 py-20 text-sm">
-                            {search ? "No shops match your search." : "No shops yet. Create your first shop!"}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Modals */}
-            {createOpen && (
-                <CreateShopModal
-                    onClose={() => setCreateOpen(false)}
-                    onCreated={fetchShops}
-                />
-            )}
-
-            {editShop && (
-                <EditShopModal
-                    shop={editShop}
-                    onClose={() => setEditShop(null)}
-                    onSaved={fetchShops}
-                />
-            )}
-
-            {viewShop && (
-                <ShopStatsDrawer
-                    shop={viewShop}
-                    onClose={() => setViewShop(null)}
-                />
-            )}
-        </div>
+                    </div>
+                </Dialog>
+            </div>
         </AdminLayout>
     );
 }

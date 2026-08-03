@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
-import Navbar from "../components/Navbar";
-import PurchaseTable from "../components/Purchases/PurchaseTable";
 import PurchaseModal from "../components/Purchases/PurchaseModal";
 import { toast } from "react-toastify";
-import { FaTruck, FaPlus, FaSearch } from "react-icons/fa";
+import { Truck, Plus, Search, Loader2, FileText } from "lucide-react";
 import { getPurchases, createPurchase } from "../services/purchaseService";
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
 
 export default function Purchases() {
     const [purchases, setPurchases] = useState([]);
@@ -36,7 +39,7 @@ export default function Purchases() {
             setLoading(true);
             const data = await getPurchases();
             setPurchases(data);
-        } catch (err) {
+        } catch {
             toast.error("Failed to load purchases");
         } finally {
             setLoading(false);
@@ -49,7 +52,7 @@ export default function Purchases() {
             toast.success(`Purchase saved! Invoice: ${result.invoice_number}`);
             setShowModal(false);
             loadPurchases();
-        } catch (err) {
+        } catch {
             toast.error("Failed to save purchase.");
         }
     }
@@ -58,136 +61,128 @@ export default function Purchases() {
 
     return (
         <AdminLayout>
-            <Navbar />
-
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-lg">
-                        <FaTruck />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Purchases</h1>
-                        <p className="text-sm text-slate-500">
-                            {purchases.length} records &nbsp;·&nbsp;
-                            <span className="text-orange-600 font-semibold">₹{totalSpend.toFixed(2)} total</span>
-                        </p>
-                    </div>
-                </div>
-                <button
-                    id="new-purchase-btn"
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-orange-500/30 transition-all"
-                >
-                    <FaPlus /> New Purchase
-                </button>
-            </div>
-
-            {/* Search */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
-                <div className="relative">
-                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        id="purchase-search"
-                        type="text"
-                        placeholder="Search by invoice, supplier, or payment mode..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition"
-                    />
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                {loading ? (
-                    <div className="flex items-center justify-center py-20 text-slate-400">
-                        <div className="text-center">
-                            <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-3" />
-                            <p className="text-sm">Loading purchases...</p>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                            <Truck className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Purchase Orders
+                            </h1>
+                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                                <span>{purchases.length} Orders Logged</span>
+                                <span>•</span>
+                                <Badge variant="warning" className="px-2 py-0 text-xs font-bold">
+                                    ₹{totalSpend.toLocaleString("en-IN", { minimumFractionDigits: 2 })} Total Spend
+                                </Badge>
+                            </div>
                         </div>
                     </div>
-                ) : filtered.length === 0 ? (
-                    <div className="text-center py-16 text-slate-400">
-                        <FaTruck className="mx-auto text-4xl mb-3 opacity-30" />
-                        <p className="font-medium">No purchases found</p>
-                        <p className="text-sm mt-1">Record a new purchase to get started</p>
-                    </div>
-                ) : (
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100">
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice</th>
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Supplier</th>
-                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                                <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Transport</th>
-                                <th className="px-5 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Amount</th>
-                                <th className="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {filtered.map((purchase, idx) => (
-                                <tr key={purchase.id} className="hover:bg-orange-50/30 transition-colors">
-                                    <td className="px-5 py-3.5 text-sm text-slate-400">{idx + 1}</td>
-                                    <td className="px-5 py-3.5">
-                                        <span className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-                                            {purchase.invoice_number}
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-3.5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-bold">
-                                                {purchase.supplier?.charAt(0)?.toUpperCase() || "?"}
-                                            </div>
-                                            <span className="font-medium text-slate-700">{purchase.supplier || "—"}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-5 py-3.5 text-slate-500 text-sm">
-                                        {purchase.purchase_date
-                                            ? new Date(purchase.purchase_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-                                            : "—"}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-right text-xs">
-                                        {purchase.transport_total > 0 ? (
-                                            <div>
-                                                <span className="font-bold text-orange-600">₹{Number(purchase.transport_total).toFixed(2)}</span>
-                                                <div className="text-slate-400 text-[11px]">
-                                                    {purchase.total_cartons} ctns @ ₹{purchase.transport_per_carton}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <span className="text-slate-400">—</span>
-                                        )}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-right font-bold text-slate-800">
-                                        ₹{Number(purchase.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-center">
-                                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                            purchase.payment_mode === "Cash"
-                                                ? "bg-green-50 text-green-600"
-                                                : purchase.payment_mode === "UPI"
-                                                ? "bg-blue-50 text-blue-600"
-                                                : "bg-slate-100 text-slate-600"
-                                        }`}>
-                                            {purchase.payment_mode || "—"}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+
+                    <Button
+                        id="new-purchase-btn"
+                        variant="gradient"
+                        onClick={() => setShowModal(true)}
+                        className="text-slate-950 font-bold"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        <span>New Purchase Order</span>
+                    </Button>
+                </div>
+
+                {/* Search */}
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                            <Input
+                                id="purchase-search"
+                                type="text"
+                                placeholder="Search by invoice number, supplier name, or payment method..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                                <p className="text-sm font-medium">Loading purchase records...</p>
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <FileText className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                                <p className="font-semibold text-slate-900 dark:text-slate-100">No purchases found</p>
+                                <p className="text-xs text-slate-500">Record a new stock purchase to get started</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>#</TableHead>
+                                        <TableHead>Invoice #</TableHead>
+                                        <TableHead>Supplier</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-right">Transport</TableHead>
+                                        <TableHead className="text-right">Total Amount</TableHead>
+                                        <TableHead className="text-center">Payment Mode</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filtered.map((purchase, idx) => (
+                                        <TableRow key={purchase.id}>
+                                            <TableCell className="text-slate-400 text-xs">{idx + 1}</TableCell>
+                                            <TableCell className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                {purchase.invoice_number}
+                                            </TableCell>
+                                            <TableCell className="font-bold text-slate-900 dark:text-slate-100">
+                                                {purchase.supplier || "—"}
+                                            </TableCell>
+                                            <TableCell className="text-slate-500 text-xs">
+                                                {purchase.purchase_date
+                                                    ? new Date(purchase.purchase_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                                                    : "—"}
+                                            </TableCell>
+                                            <TableCell className="text-right text-xs">
+                                                {purchase.transport_total > 0 ? (
+                                                    <span className="font-bold text-amber-600">₹{Number(purchase.transport_total).toFixed(2)}</span>
+                                                ) : (
+                                                    <span className="text-slate-400">—</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right font-bold text-slate-900 dark:text-slate-100">
+                                                ₹{Number(purchase.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="outline" className="text-[11px]">
+                                                    {purchase.payment_mode || "Cash"}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Purchase Modal */}
+                {showModal && (
+                    <PurchaseModal
+                        onClose={() => setShowModal(false)}
+                        onSave={handleSave}
+                    />
                 )}
             </div>
-
-            {/* Purchase Modal */}
-            {showModal && (
-                <PurchaseModal
-                    onClose={() => setShowModal(false)}
-                    onSave={handleSave}
-                />
-            )}
         </AdminLayout>
     );
 }

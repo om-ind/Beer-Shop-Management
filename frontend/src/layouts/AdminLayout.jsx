@@ -1,30 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
-import { FaBars } from "react-icons/fa";
+import Navbar from "../components/Navbar";
+import { getLowStockProducts } from "../services/lowStockService";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [lowStockCount, setLowStockCount] = useState(0);
+    const { isAdmin } = useAuth();
+
+    useEffect(() => {
+        if (!isAdmin) {
+            getLowStockProducts()
+                .then(data => setLowStockCount(data.length))
+                .catch(() => {});
+        }
+    }, [isAdmin]);
 
     return (
-        <div className="flex min-h-screen bg-slate-100">
+        <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100">
+            {/* Sidebar */}
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-            <div className="flex-1 flex flex-col min-w-0">
-                {/* Mobile Header Bar */}
-                <div className="lg:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between shadow-md">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="p-2 rounded-lg bg-slate-800 text-slate-200 hover:text-white transition"
-                        >
-                            <FaBars className="text-lg" />
-                        </button>
-                        <span className="font-bold text-lg">🍺 Beer Shop ERP</span>
-                    </div>
-                </div>
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Navbar Header */}
+                <Navbar
+                    onOpenSidebar={() => setSidebarOpen(true)}
+                    lowStockCount={lowStockCount}
+                />
 
-                <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
-                    {children}
+                {/* Main Scrollable View Area */}
+                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                    <div className="mx-auto max-w-7xl space-y-6">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

@@ -1,68 +1,60 @@
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
 import { getLowStockProducts } from "../services/lowStockService";
 import { usePWAInstall } from "../hooks/usePWAInstall";
 import {
-    FaHome,
-    FaBox,
-    FaShoppingCart,
-    FaTruck,
-    FaUsers,
-    FaChartBar,
-    FaRobot,
-    FaCog,
-    FaUserSecret,
-    FaSignOutAlt,
-    FaUserShield,
-    FaWallet,
-    FaReceipt,
-    FaExclamationTriangle,
-    FaStore,
-    FaTachometerAlt,
-    FaFileAlt,
-    FaBookOpen,
-    FaClipboardList,
-    FaFileImport,
-    FaDownload,
-} from "react-icons/fa";
+    LayoutDashboard,
+    Package,
+    ShoppingCart,
+    Truck,
+    Users,
+    BarChart3,
+    Sparkles,
+    Settings,
+    LogOut,
+    Shield,
+    Wallet,
+    Receipt,
+    AlertTriangle,
+    Building2,
+    BookOpen,
+    ClipboardList,
+    FileSpreadsheet,
+    FileUp,
+    Download,
+    X,
+} from "lucide-react";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
-// Menu visible to shop users (Owner / Manager / Cashier)
 const SHOP_MENU = [
-    { icon: <FaHome />, label: "Dashboard", path: "/dashboard", roles: ["Owner", "Manager", "Cashier"] },
-    { icon: <FaBox />, label: "Products", path: "/products", roles: ["Owner", "Manager"] },
-    { icon: <FaShoppingCart />, label: "Sales", path: "/sales", roles: ["Owner", "Manager", "Cashier"] },
-    { icon: <FaWallet />, label: "Cash Register", path: "/cash-register", roles: ["Owner", "Manager"] },
-    { icon: <FaTruck />, label: "Purchases", path: "/purchases", roles: ["Owner", "Manager"] },
-    { icon: <FaUsers />, label: "Customers", path: "/customers", roles: ["Owner", "Manager", "Cashier"] },
-    { icon: <FaUserSecret />, label: "Suppliers", path: "/suppliers", roles: ["Owner", "Manager"] },
-    { icon: <FaExclamationTriangle />, label: "Low Stock", path: "/low-stock", roles: ["Owner", "Manager"], badge: true },
-    { icon: <FaReceipt />, label: "Expenses", path: "/expenses", roles: ["Owner", "Manager"] },
-    { icon: <FaChartBar />, label: "Reports", path: "/reports", roles: ["Owner", "Manager"] },
-    { icon: <FaRobot />, label: "Analytics", path: "/analytics", roles: ["Owner", "Manager"] },
-    { icon: <FaUserShield />, label: "Users", path: "/users", roles: ["Owner"] },
-    { icon: <FaFileImport />, label: "Import Data", path: "/import", roles: ["Owner"] },
-    { icon: <FaCog />, label: "Settings", path: "/settings", roles: ["Owner", "Manager", "Cashier"] },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", roles: ["Owner", "Manager", "Cashier"] },
+    { icon: Package, label: "Products", path: "/products", roles: ["Owner", "Manager"] },
+    { icon: ShoppingCart, label: "Sales & POS", path: "/sales", roles: ["Owner", "Manager", "Cashier"] },
+    { icon: Wallet, label: "Cash Register", path: "/cash-register", roles: ["Owner", "Manager"] },
+    { icon: Truck, label: "Purchases", path: "/purchases", roles: ["Owner", "Manager"] },
+    { icon: Users, label: "Customers", path: "/customers", roles: ["Owner", "Manager", "Cashier"] },
+    { icon: Building2, label: "Suppliers", path: "/suppliers", roles: ["Owner", "Manager"] },
+    { icon: AlertTriangle, label: "Low Stock", path: "/low-stock", roles: ["Owner", "Manager"], badge: true },
+    { icon: Receipt, label: "Expenses", path: "/expenses", roles: ["Owner", "Manager"] },
+    { icon: BarChart3, label: "Reports", path: "/reports", roles: ["Owner", "Manager"] },
+    { icon: Sparkles, label: "AI Analytics", path: "/analytics", roles: ["Owner", "Manager"] },
+    { icon: Shield, label: "User Control", path: "/users", roles: ["Owner"] },
+    { icon: FileUp, label: "Import Data", path: "/import", roles: ["Owner"] },
+    { icon: Settings, label: "Settings", path: "/settings", roles: ["Owner", "Manager", "Cashier"] },
     // ── Excise Compliance ──
-    { divider: true, label: "Excise", roles: ["Owner", "Manager"] },
-    { icon: <FaBookOpen />, label: "Brand Register", path: "/excise/brands", roles: ["Owner", "Manager"] },
-    { icon: <FaClipboardList />, label: "Daily Register", path: "/excise/daily-register", roles: ["Owner", "Manager"] },
-    { icon: <FaFileAlt />, label: "Monthly Statement", path: "/excise/monthly-statement", roles: ["Owner", "Manager"] },
+    { divider: true, label: "Excise Compliance", roles: ["Owner", "Manager"] },
+    { icon: BookOpen, label: "Brand Register", path: "/excise/brands", roles: ["Owner", "Manager"] },
+    { icon: ClipboardList, label: "Daily Register", path: "/excise/daily-register", roles: ["Owner", "Manager"] },
+    { icon: FileSpreadsheet, label: "Monthly Statement", path: "/excise/monthly-statement", roles: ["Owner", "Manager"] },
 ];
 
-// Menu visible to Admin only
 const ADMIN_MENU = [
-    { icon: <FaTachometerAlt />, label: "Admin Dashboard", path: "/admin/dashboard" },
-    { icon: <FaStore />, label: "All Shops", path: "/admin/shops" },
-    { icon: <FaUserShield />, label: "Settings", path: "/settings" },
+    { icon: LayoutDashboard, label: "Admin Dashboard", path: "/admin/dashboard" },
+    { icon: Building2, label: "All Shops", path: "/admin/shops" },
+    { icon: Settings, label: "Settings", path: "/settings" },
 ];
-
-const ROLE_STYLE = {
-    Owner:   "bg-yellow-400/20 text-yellow-300",
-    Manager: "bg-blue-400/20 text-blue-300",
-    Cashier: "bg-green-400/20 text-green-300",
-    Admin:   "bg-purple-400/20 text-purple-300",
-};
 
 export default function Sidebar({ isOpen, onClose }) {
     const { user, logout, isAdmin } = useAuth();
@@ -93,106 +85,122 @@ export default function Sidebar({ isOpen, onClose }) {
             {isOpen && (
                 <div
                     onClick={onClose}
-                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden"
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden transition-opacity"
                 />
             )}
 
-            <aside className={`fixed lg:static top-0 bottom-0 left-0 z-50 w-64 min-h-screen bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out ${
-                isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-            }`}>
-
+            <aside
+                className={`fixed lg:static top-0 bottom-0 left-0 z-50 w-64 border-r border-slate-800 bg-slate-950 text-slate-100 flex flex-col transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none ${
+                    isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                }`}
+            >
                 {/* Logo + Mobile Close */}
-                <div className="px-5 py-5 border-b border-slate-800 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold flex items-center gap-2">
-                            🍺 <span>Beer Shop ERP</span>
-                        </h1>
-                        <p className="text-slate-400 text-xs mt-0.5">
-                            {isAdmin ? "Admin Panel" : "Management System"}
-                        </p>
+                <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white font-bold text-xl shadow-lg shadow-amber-500/20">
+                            🍺
+                        </div>
+                        <div>
+                            <h1 className="font-display text-lg font-bold text-white tracking-tight">
+                                Beer Shop ERP
+                            </h1>
+                            <p className="text-slate-400 text-xs font-medium">
+                                {isAdmin ? "Admin Console" : "Smart Management"}
+                            </p>
+                        </div>
                     </div>
                     {onClose && (
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={onClose}
-                            className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                            className="lg:hidden text-slate-400 hover:text-white hover:bg-slate-800"
                         >
-                            ✕
-                        </button>
+                            <X className="h-5 w-5" />
+                        </Button>
                     )}
                 </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                {menu.map((item) => {
-                    if (item.divider) {
+                {/* Navigation Links */}
+                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+                    {menu.map((item, index) => {
+                        if (item.divider) {
+                            return (
+                                <div key={item.label || index} className="pt-4 pb-2 px-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                        {item.label}
+                                    </p>
+                                </div>
+                            );
+                        }
+
+                        const IconComponent = item.icon;
+
                         return (
-                            <div key={item.label} className="pt-3 pb-1 px-2">
-                                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
-                            </div>
+                            <NavLink
+                                key={item.label}
+                                to={item.path}
+                                onClick={onClose}
+                                className={({ isActive }) =>
+                                    `flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                        isActive
+                                            ? isAdmin
+                                                ? "bg-purple-600 text-white font-semibold shadow-lg shadow-purple-600/25"
+                                                : "bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/25"
+                                            : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+                                    }`
+                                }
+                            >
+                                <IconComponent className="h-4 w-4 flex-shrink-0" />
+                                <span className="flex-1 truncate">{item.label}</span>
+                                {item.badge && lowStockCount > 0 && (
+                                    <Badge variant="destructive" className="ml-auto px-1.5 py-0 text-[10px] rounded-full">
+                                        {lowStockCount}
+                                    </Badge>
+                                )}
+                            </NavLink>
                         );
-                    }
-                    return (
-                        <NavLink
-                            key={item.label}
-                            to={item.path}
-                            className={({ isActive }) =>
-                                `flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                                    ? isAdmin
-                                        ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                                        : "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                                    : "text-slate-300 hover:bg-slate-700/60 hover:text-white"
-                                }`
-                            }
+                    })}
+                </nav>
+
+                {/* Footer User Info & Actions */}
+                <div className="p-4 border-t border-slate-800/80 bg-slate-950/50 space-y-3">
+                    {isInstallable && (
+                        <Button
+                            onClick={promptInstall}
+                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold shadow-md shadow-emerald-500/20 rounded-xl"
                         >
-                            <span className="text-base">{item.icon}</span>
-                            <span className="flex-1">{item.label}</span>
-                            {item.badge && lowStockCount > 0 && (
-                                <span className="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 shadow">
-                                    {lowStockCount}
-                                </span>
-                            )}
-                        </NavLink>
-                    );
-                })}
-            </nav>
+                            <Download className="h-4 w-4 mr-2" />
+                            <span>Install Web App</span>
+                        </Button>
+                    )}
 
-            {/* User Profile + Logout */}
-            <div className="px-4 py-4 border-t border-slate-700 space-y-3">
-                {isInstallable && (
-                    <button
-                        onClick={promptInstall}
-                        className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all shadow-md shadow-emerald-500/20"
+                    {user && (
+                        <div className="flex items-center gap-3 px-2 py-1">
+                            <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md ${isAdmin ? "bg-purple-600" : "bg-amber-600"}`}>
+                                {user.full_name?.charAt(0)?.toUpperCase() || "U"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-bold truncate">
+                                    {user.full_name || user.username}
+                                </p>
+                                <p className="text-slate-400 text-xs truncate">
+                                    {user.role}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <Button
+                        variant="ghost"
+                        onClick={handleLogout}
+                        className="w-full justify-start text-slate-400 hover:bg-red-500/10 hover:text-red-400 rounded-xl"
                     >
-                        <FaDownload />
-                        <span>Install Web App</span>
-                    </button>
-                )}
-
-                {user && (
-                    <div className="flex items-center gap-3 px-2">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${isAdmin ? "bg-purple-600" : "bg-blue-600"}`}>
-                            {user.full_name?.charAt(0)?.toUpperCase() || "?"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-semibold truncate">
-                                {user.full_name || user.username}
-                            </p>
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ROLE_STYLE[user.role] || "bg-gray-500/20 text-gray-300"}`}>
-                                {user.role}
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-all"
-                >
-                    <FaSignOutAlt />
-                    <span>Sign Out</span>
-                </button>
-            </div>
-        </aside>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        <span>Sign Out</span>
+                    </Button>
+                </div>
+            </aside>
         </>
     );
 }

@@ -1,24 +1,31 @@
 import { useEffect, useState, useCallback } from "react";
+import AdminLayout from "../layouts/AdminLayout";
 import api from "../api/api";
 import { toast } from "react-toastify";
+import { ClipboardList, Printer, Lock, Calendar, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from "../components/ui/table";
 
 function today() {
     return new Date().toISOString().slice(0, 10);
 }
 
 export default function DailySalesRegister() {
-    const [date, setDate]       = useState(today());
-    const [rows, setRows]       = useState([]);
+    const [date, setDate] = useState(today());
+    const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [locking, setLocking] = useState(false);
-    const [editRow, setEditRow] = useState(null); // row being edited inline
-    const [saving, setSaving]   = useState(false);
+    const [editRow, setEditRow] = useState(null);
+    const [saving, setSaving] = useState(false);
 
     const load = useCallback(() => {
         setLoading(true);
         api.get(`/excise/daily-register?date=${date}`)
             .then(r => setRows(r.data.rows || []))
-            .catch(() => toast.error("Failed to load register"))
+            .catch(() => toast.error("Failed to load daily register"))
             .finally(() => setLoading(false));
     }, [date]);
 
@@ -30,14 +37,14 @@ export default function DailySalesRegister() {
         setSaving(true);
         try {
             await api.post("/excise/daily-register/save", {
-                sale_date:     date,
-                product_id:    row.product_id,
+                sale_date: date,
+                product_id: row.product_id,
                 opening_stock: Number(row.opening_stock),
-                qty_received:  Number(row.qty_received),
-                qty_sold:      Number(row.qty_sold),
-                sale_value:    Number(row.sale_value),
+                qty_received: Number(row.qty_received),
+                qty_sold: Number(row.qty_sold),
+                sale_value: Number(row.sale_value),
             });
-            toast.success("Row saved");
+            toast.success("Row updated");
             setEditRow(null);
             load();
         } catch (err) {
@@ -48,11 +55,11 @@ export default function DailySalesRegister() {
     }
 
     async function lockDay() {
-        if (!window.confirm(`Lock the register for ${date}? This cannot be undone.`)) return;
+        if (!window.confirm(`Lock the register for ${date}? This action is permanent for excise records.`)) return;
         setLocking(true);
         try {
             await api.post("/excise/daily-register/lock", { date });
-            toast.success(`Register locked for ${date}`);
+            toast.success(`Daily register locked for ${date}`);
             load();
         } catch (err) {
             toast.error(err.response?.data?.error || "Lock failed");
@@ -65,166 +72,166 @@ export default function DailySalesRegister() {
 
     const totals = rows.reduce((acc, r) => {
         acc.qty_received += Number(r.qty_received);
-        acc.qty_sold     += Number(r.qty_sold);
-        acc.sale_value   += Number(r.sale_value);
+        acc.qty_sold += Number(r.qty_sold);
+        acc.sale_value += Number(r.sale_value);
         return acc;
     }, { qty_received: 0, qty_sold: 0, sale_value: 0 });
 
     return (
-        <div className="p-6 space-y-6 print:p-4">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Daily Sales Register</h1>
-                    <p className="text-slate-400 text-sm mt-0.5">Statutory daily sales record for excise submission</p>
+        <AdminLayout>
+            <div className="space-y-6 print:p-0">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                            <ClipboardList className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Daily Excise Register
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                                Statutory daily opening, stock received, sales, and closing register
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <Calendar className="h-4 w-4 text-slate-400" />
+                            <Input
+                                type="date"
+                                value={date}
+                                onChange={e => setDate(e.target.value)}
+                                className="h-8 border-none bg-transparent p-0 text-sm font-semibold"
+                            />
+                        </div>
+
+                        <Button variant="outline" onClick={printRegister} className="rounded-xl">
+                            <Printer className="h-4 w-4 mr-2" />
+                            <span>Print Register</span>
+                        </Button>
+
+                        {!isLocked && rows.length > 0 && (
+                            <Button variant="destructive" disabled={locking} onClick={lockDay} className="rounded-xl font-bold">
+                                <Lock className="h-4 w-4 mr-2" />
+                                <span>{locking ? "Locking..." : "Lock Register"}</span>
+                            </Button>
+                        )}
+
+                        {isLocked && (
+                            <Badge variant="success" className="px-3 py-1.5 text-xs font-bold gap-1">
+                                <Lock className="h-3 w-3" /> Locked
+                            </Badge>
+                        )}
+                    </div>
                 </div>
-                <div className="flex gap-3 flex-wrap items-center">
-                    <input
-                        type="date"
-                        value={date}
-                        onChange={e => setDate(e.target.value)}
-                        className="bg-slate-800 border border-slate-600 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                        onClick={printRegister}
-                        className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 text-white rounded-lg border border-slate-600 transition-colors"
-                    >🖨 Print</button>
-                    {!isLocked && rows.length > 0 && (
-                        <button
-                            onClick={lockDay}
-                            disabled={locking}
-                            className="px-4 py-2 text-sm bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-600/40 rounded-lg transition-colors disabled:opacity-50 font-semibold"
-                        >{locking ? "Locking…" : "🔒 Lock Day"}</button>
-                    )}
-                    {isLocked && (
-                        <span className="px-4 py-2 text-sm bg-green-600/20 text-green-300 border border-green-600/40 rounded-lg font-semibold">
-                            ✅ Locked
-                        </span>
-                    )}
+
+                {/* Print Title Header */}
+                <div className="hidden print:block text-center mb-6">
+                    <h1 className="text-xl font-bold font-display">Daily Statutory Excise Sales Register</h1>
+                    <p className="text-sm">Date: {date}</p>
                 </div>
-            </div>
 
-            {/* Print header (visible only in print) */}
-            <div className="hidden print:block text-center mb-4">
-                <h1 className="text-xl font-bold">Daily Statutory Sales Register</h1>
-                <p className="text-sm">Date: {date}</p>
-            </div>
+                {/* Table Card */}
+                <Card className="print:border-none print:shadow-none">
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                                <p className="text-sm font-medium">Loading daily register entries...</p>
+                            </div>
+                        ) : rows.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <ClipboardList className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                                <p className="font-semibold text-slate-900 dark:text-slate-100">No register entries for {date}</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>#</TableHead>
+                                        <TableHead>Brand & Product</TableHead>
+                                        <TableHead>Excise Code</TableHead>
+                                        <TableHead className="text-right">Pack Size</TableHead>
+                                        <TableHead className="text-right">Opening</TableHead>
+                                        <TableHead className="text-right">Received</TableHead>
+                                        <TableHead className="text-right">Sold</TableHead>
+                                        <TableHead className="text-right">Closing</TableHead>
+                                        <TableHead className="text-right">Sale Value (₹)</TableHead>
+                                        <TableHead className="text-center print:hidden">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {rows.map((r, i) => {
+                                        const isEditing = editRow?.product_id === r.product_id;
+                                        const cur = isEditing ? editRow : r;
+                                        const closing = Number(cur.opening_stock) + Number(cur.qty_received) - Number(cur.qty_sold);
+                                        return (
+                                            <TableRow key={r.product_id}>
+                                                <TableCell className="text-slate-400 text-xs">{i + 1}</TableCell>
+                                                <TableCell className="font-bold text-slate-900 dark:text-slate-100">
+                                                    <div>{r.name}</div>
+                                                    <div className="text-xs text-slate-400 font-normal">{r.brand}</div>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs text-slate-500">
+                                                    {r.excise_code || "—"}
+                                                </TableCell>
+                                                <TableCell className="text-right text-xs">{r.pack_size_ml ? `${r.pack_size_ml} ml` : "—"}</TableCell>
 
-            {loading ? (
-                <div className="text-slate-400 text-center py-20">Loading…</div>
-            ) : rows.length === 0 ? (
-                <div className="text-center py-20">
-                    <div className="text-5xl mb-4">📋</div>
-                    <p className="text-slate-400">No sales or purchases found for {date}</p>
-                </div>
-            ) : (
-                <>
-                    <div className="overflow-x-auto rounded-xl border border-slate-700 print:border-black">
-                        <table className="w-full text-sm">
-                            <thead className="bg-slate-800 print:bg-gray-200 text-slate-400 print:text-black text-xs uppercase">
-                                <tr>
-                                    <th className="px-4 py-3 text-left">Sr</th>
-                                    <th className="px-4 py-3 text-left">Brand / Product</th>
-                                    <th className="px-4 py-3 text-left">Excise Code</th>
-                                    <th className="px-4 py-3 text-left">Type</th>
-                                    <th className="px-4 py-3 text-right">Pack (ml)</th>
-                                    <th className="px-4 py-3 text-right">Opening</th>
-                                    <th className="px-4 py-3 text-right">Received</th>
-                                    <th className="px-4 py-3 text-right">Sold</th>
-                                    <th className="px-4 py-3 text-right">Closing</th>
-                                    <th className="px-4 py-3 text-right">Sale Value (₹)</th>
-                                    <th className="px-4 py-3 text-center print:hidden">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-700/50 print:divide-gray-300">
-                                {rows.map((r, i) => {
-                                    const isEditing = editRow?.product_id === r.product_id;
-                                    const cur = isEditing ? editRow : r;
-                                    const closing = Number(cur.opening_stock) + Number(cur.qty_received) - Number(cur.qty_sold);
+                                                {["opening_stock", "qty_received", "qty_sold"].map(field => (
+                                                    <TableCell key={field} className="text-right font-medium">
+                                                        {isEditing && !r.is_locked ? (
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                className="h-8 w-20 text-right text-xs"
+                                                                value={cur[field]}
+                                                                onChange={e => setEditRow(v => ({ ...v, [field]: e.target.value }))}
+                                                            />
+                                                        ) : (
+                                                            r[field]
+                                                        )}
+                                                    </TableCell>
+                                                ))}
 
-                                    return (
-                                        <tr key={r.product_id} className="bg-slate-900 print:bg-white hover:bg-slate-800/60 transition-colors">
-                                            <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-white print:text-black font-medium">{r.name}</p>
-                                                <p className="text-slate-400 print:text-gray-500 text-xs">{r.brand}</p>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {r.excise_code
-                                                    ? <span className="font-mono text-xs bg-slate-700 print:bg-gray-100 px-2 py-0.5 rounded text-blue-300 print:text-blue-800">{r.excise_code}</span>
-                                                    : <span className="text-slate-500 text-xs">—</span>
-                                                }
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-300 print:text-gray-700 text-xs">{r.liquor_type || "—"}</td>
-                                            <td className="px-4 py-3 text-right text-slate-300 print:text-gray-700">{r.pack_size_ml || "—"}</td>
-
-                                            {/* Editable cells */}
-                                            {["opening_stock", "qty_received", "qty_sold"].map(field => (
-                                                <td key={field} className="px-4 py-3 text-right">
-                                                    {isEditing && !r.is_locked ? (
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            className="w-20 bg-slate-700 border border-slate-500 text-white text-sm text-right px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={cur[field]}
-                                                            onChange={e => setEditRow(v => ({ ...v, [field]: e.target.value }))}
-                                                        />
+                                                <TableCell className="text-right font-bold">{closing}</TableCell>
+                                                <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                                    ₹{Number(cur.sale_value).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="text-center print:hidden">
+                                                    {r.is_locked ? (
+                                                        <Badge variant="success" className="text-[10px]">Locked</Badge>
+                                                    ) : isEditing ? (
+                                                        <div className="flex gap-1 justify-center">
+                                                            <Button size="sm" variant="gradient" onClick={() => saveRow({ ...editRow, closing_stock: closing })} className="h-7 text-xs text-slate-950">Save</Button>
+                                                            <Button size="sm" variant="outline" onClick={() => setEditRow(null)} className="h-7 text-xs">Cancel</Button>
+                                                        </div>
                                                     ) : (
-                                                        <span className="text-slate-200 print:text-black">{r[field]}</span>
+                                                        <Button size="sm" variant="ghost" onClick={() => setEditRow({ ...r })} className="h-7 text-xs text-amber-600">Edit</Button>
                                                     )}
-                                                </td>
-                                            ))}
-
-                                            <td className="px-4 py-3 text-right font-semibold text-white print:text-black">{closing}</td>
-                                            <td className="px-4 py-3 text-right text-green-400 print:text-green-800 font-medium">
-                                                ₹{Number(cur.sale_value).toFixed(2)}
-                                            </td>
-                                            <td className="px-4 py-3 text-center print:hidden">
-                                                {r.is_locked ? (
-                                                    <span className="text-xs text-green-400">🔒</span>
-                                                ) : isEditing ? (
-                                                    <div className="flex gap-1 justify-center">
-                                                        <button
-                                                            onClick={() => saveRow({ ...editRow, closing_stock: closing })}
-                                                            disabled={saving}
-                                                            className="text-xs bg-green-600/20 hover:bg-green-600/40 text-green-300 border border-green-600/30 px-2 py-1 rounded transition-colors"
-                                                        >Save</button>
-                                                        <button
-                                                            onClick={() => setEditRow(null)}
-                                                            className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded transition-colors"
-                                                        >Cancel</button>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => setEditRow({ ...r })}
-                                                        className="text-xs bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-600/30 px-3 py-1.5 rounded-lg transition-colors"
-                                                    >Edit</button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            <tfoot className="bg-slate-800/80 print:bg-gray-100 text-white print:text-black font-bold text-sm">
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-3 text-slate-400 print:text-gray-600 font-normal">TOTALS</td>
-                                    <td className="px-4 py-3 text-right">{totals.qty_received}</td>
-                                    <td className="px-4 py-3 text-right">{totals.qty_sold}</td>
-                                    <td className="px-4 py-3"></td>
-                                    <td className="px-4 py-3 text-right text-green-400 print:text-green-800">₹{totals.sale_value.toFixed(2)}</td>
-                                    <td className="print:hidden"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    {/* Print footer */}
-                    <div className="hidden print:flex justify-between mt-8 text-sm">
-                        <div>Prepared by: _______________</div>
-                        <div>Shop Seal & Signature: _______________</div>
-                    </div>
-                </>
-            )}
-        </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="font-bold text-slate-900 dark:text-slate-100">REGISTER TOTALS</TableCell>
+                                        <TableCell className="text-right font-bold">{totals.qty_received}</TableCell>
+                                        <TableCell className="text-right font-bold">{totals.qty_sold}</TableCell>
+                                        <TableCell />
+                                        <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400 text-base">
+                                            ₹{totals.sale_value.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell className="print:hidden" />
+                                    </TableRow>
+                                </TableFooter>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </AdminLayout>
     );
 }

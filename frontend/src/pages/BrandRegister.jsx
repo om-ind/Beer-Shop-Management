@@ -1,24 +1,24 @@
 import { useEffect, useState, useCallback } from "react";
+import AdminLayout from "../layouts/AdminLayout";
 import api from "../api/api";
 import { toast } from "react-toastify";
+import { BookOpen, Search, Edit3, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
+import { Dialog } from "../components/ui/dialog";
 
 const LIQUOR_TYPES = ["Beer", "IMFL", "Wine", "Country Liquor", "Foreign Liquor"];
 
-const TYPE_COLOR = {
-    "Beer":           "bg-amber-400/20 text-amber-300 border-amber-400/30",
-    "IMFL":           "bg-blue-400/20 text-blue-300 border-blue-400/30",
-    "Wine":           "bg-purple-400/20 text-purple-300 border-purple-400/30",
-    "Country Liquor": "bg-orange-400/20 text-orange-300 border-orange-400/30",
-    "Foreign Liquor": "bg-cyan-400/20 text-cyan-300 border-cyan-400/30",
-};
-
 export default function BrandRegister() {
     const [products, setProducts] = useState([]);
-    const [filter, setFilter]     = useState("");
-    const [search, setSearch]     = useState("");
-    const [editing, setEditing]   = useState(null); // { id, excise_code, pack_size_ml, liquor_type }
-    const [saving, setSaving]     = useState(false);
-    const [loading, setLoading]   = useState(true);
+    const [filter, setFilter] = useState("");
+    const [search, setSearch] = useState("");
+    const [editing, setEditing] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const load = useCallback(() => {
         setLoading(true);
@@ -33,10 +33,10 @@ export default function BrandRegister() {
 
     function startEdit(p) {
         setEditing({
-            id:           p.id,
-            excise_code:  p.excise_code  || "",
+            id: p.id,
+            excise_code: p.excise_code || "",
             pack_size_ml: p.pack_size_ml || "",
-            liquor_type:  p.liquor_type  || "",
+            liquor_type: p.liquor_type || "",
         });
     }
 
@@ -44,11 +44,11 @@ export default function BrandRegister() {
         setSaving(true);
         try {
             await api.put(`/excise/brand-register/${editing.id}`, {
-                excise_code:  editing.excise_code,
+                excise_code: editing.excise_code,
                 pack_size_ml: editing.pack_size_ml || null,
-                liquor_type:  editing.liquor_type  || null,
+                liquor_type: editing.liquor_type || null,
             });
-            toast.success("Saved");
+            toast.success("Excise details updated");
             setEditing(null);
             load();
         } catch {
@@ -65,161 +65,169 @@ export default function BrandRegister() {
         p.excise_code?.toLowerCase().includes(search.toLowerCase())
     );
 
-    const grouped = LIQUOR_TYPES.reduce((acc, t) => {
-        const items = visible.filter(p => p.liquor_type === t);
-        if (items.length) acc[t] = items;
-        return acc;
-    }, {});
-    const ungrouped = visible.filter(p => !p.liquor_type);
-
     return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Brand Register</h1>
-                    <p className="text-slate-400 text-sm mt-0.5">Excise-mandated brand master with codes and pack sizes</p>
-                </div>
-                <div className="flex gap-3 flex-wrap">
-                    <input
-                        className="bg-slate-800 border border-slate-600 text-white text-sm px-3 py-2 rounded-lg w-52 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Search brand / name / code…"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                    <select
-                        className="bg-slate-800 border border-slate-600 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={filter}
-                        onChange={e => setFilter(e.target.value)}
-                    >
-                        <option value="">All Types</option>
-                        {LIQUOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                </div>
-            </div>
-
-            {loading ? (
-                <div className="text-slate-400 text-center py-20">Loading…</div>
-            ) : (
-                <div className="space-y-6">
-                    {[...Object.entries(grouped), ...(ungrouped.length ? [["Uncategorised", ungrouped]] : [])].map(([type, items]) => (
-                        <div key={type}>
-                            <div className="flex items-center gap-3 mb-3">
-                                <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${TYPE_COLOR[type] || "bg-slate-700 text-slate-300 border-slate-600"}`}>
-                                    {type}
-                                </span>
-                                <span className="text-slate-500 text-xs">{items.length} product{items.length !== 1 ? "s" : ""}</span>
-                            </div>
-                            <div className="overflow-x-auto rounded-xl border border-slate-700">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-800 text-slate-400 text-xs uppercase">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left">Brand / Name</th>
-                                            <th className="px-4 py-3 text-left">Category</th>
-                                            <th className="px-4 py-3 text-left">Excise Code</th>
-                                            <th className="px-4 py-3 text-left">Pack Size (ml)</th>
-                                            <th className="px-4 py-3 text-left">Liquor Type</th>
-                                            <th className="px-4 py-3 text-right">Stock</th>
-                                            <th className="px-4 py-3 text-right">MRP (₹)</th>
-                                            <th className="px-4 py-3 text-center">Edit</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-700/50">
-                                        {items.map(p => (
-                                            <tr key={p.id} className="bg-slate-900 hover:bg-slate-800/60 transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <p className="text-white font-medium">{p.name}</p>
-                                                    <p className="text-slate-400 text-xs">{p.brand}</p>
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-300">{p.category || "—"}</td>
-                                                <td className="px-4 py-3">
-                                                    {p.excise_code
-                                                        ? <span className="font-mono bg-slate-700 px-2 py-0.5 rounded text-blue-300 text-xs">{p.excise_code}</span>
-                                                        : <span className="text-slate-500 text-xs italic">Not set</span>
-                                                    }
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-300">{p.pack_size_ml ? `${p.pack_size_ml} ml` : "—"}</td>
-                                                <td className="px-4 py-3">
-                                                    {p.liquor_type
-                                                        ? <span className={`text-xs px-2 py-0.5 rounded-full border ${TYPE_COLOR[p.liquor_type] || ""}`}>{p.liquor_type}</span>
-                                                        : <span className="text-slate-500 text-xs italic">Not set</span>
-                                                    }
-                                                </td>
-                                                <td className="px-4 py-3 text-right text-slate-300">{p.stock}</td>
-                                                <td className="px-4 py-3 text-right text-slate-300">₹{p.selling_price?.toFixed(2)}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <button
-                                                        onClick={() => startEdit(p)}
-                                                        className="text-xs bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 px-3 py-1.5 rounded-lg transition-colors border border-blue-600/30"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+        <AdminLayout>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                            <BookOpen className="h-6 w-6" />
                         </div>
-                    ))}
-
-                    {visible.length === 0 && (
-                        <div className="text-center py-20 text-slate-500">No products found</div>
-                    )}
-                </div>
-            )}
-
-            {/* Edit Modal */}
-            {editing && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-                        <h2 className="text-white font-bold text-lg mb-5">Update Excise Details</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-slate-400 text-xs uppercase tracking-wide block mb-1.5">Excise Brand Code</label>
-                                <input
-                                    className="w-full bg-slate-700 border border-slate-600 text-white px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                                    placeholder="e.g. MH-BEER-0042"
-                                    value={editing.excise_code}
-                                    onChange={e => setEditing(v => ({ ...v, excise_code: e.target.value }))}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-slate-400 text-xs uppercase tracking-wide block mb-1.5">Pack Size (ml)</label>
-                                <input
-                                    type="number"
-                                    className="w-full bg-slate-700 border border-slate-600 text-white px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g. 650"
-                                    value={editing.pack_size_ml}
-                                    onChange={e => setEditing(v => ({ ...v, pack_size_ml: e.target.value }))}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-slate-400 text-xs uppercase tracking-wide block mb-1.5">Liquor Type</label>
-                                <select
-                                    className="w-full bg-slate-700 border border-slate-600 text-white px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value={editing.liquor_type}
-                                    onChange={e => setEditing(v => ({ ...v, liquor_type: e.target.value }))}
-                                >
-                                    <option value="">— Select —</option>
-                                    {LIQUOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => setEditing(null)}
-                                className="flex-1 px-4 py-2.5 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
-                            >Cancel</button>
-                            <button
-                                onClick={saveEdit}
-                                disabled={saving}
-                                className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors disabled:opacity-50"
-                            >{saving ? "Saving…" : "Save"}</button>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-slate-900 dark:text-slate-100">
+                                Excise Brand Register
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                                Government-mandated brand codes, sizes, and liquor classifications
+                            </p>
                         </div>
                     </div>
+
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                            <Input
+                                placeholder="Search brand code or name..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="pl-9 w-60"
+                            />
+                        </div>
+                        <select
+                            value={filter}
+                            onChange={e => setFilter(e.target.value)}
+                            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
+                        >
+                            <option value="">All Liquor Types</option>
+                            {LIQUOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </div>
                 </div>
-            )}
-        </div>
+
+                {/* Table */}
+                <Card>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                                <p className="text-sm font-medium">Fetching excise brand master...</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Brand & Name</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead>Excise Code</TableHead>
+                                        <TableHead>Pack Size (ml)</TableHead>
+                                        <TableHead>Liquor Type</TableHead>
+                                        <TableHead className="text-right">Current Stock</TableHead>
+                                        <TableHead className="text-right">MRP (₹)</TableHead>
+                                        <TableHead className="text-center">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {visible.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={8} className="text-center py-16 text-slate-400">
+                                                <BookOpen className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                                                <p className="font-semibold">No brand entries matching filter</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        visible.map(p => (
+                                            <TableRow key={p.id}>
+                                                <TableCell className="font-bold text-slate-900 dark:text-slate-100">
+                                                    <div>{p.name}</div>
+                                                    <div className="text-xs text-slate-400 font-normal">{p.brand}</div>
+                                                </TableCell>
+                                                <TableCell>{p.category || "—"}</TableCell>
+                                                <TableCell className="font-mono text-xs text-slate-500">
+                                                    {p.excise_code ? (
+                                                        <Badge variant="outline" className="font-mono">{p.excise_code}</Badge>
+                                                    ) : (
+                                                        <span className="text-slate-400 italic">Not set</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>{p.pack_size_ml ? `${p.pack_size_ml} ml` : "—"}</TableCell>
+                                                <TableCell>
+                                                    {p.liquor_type ? (
+                                                        <Badge variant="secondary">{p.liquor_type}</Badge>
+                                                    ) : (
+                                                        <span className="text-slate-400 italic">Not set</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold">{p.stock}</TableCell>
+                                                <TableCell className="text-right font-bold text-slate-900 dark:text-slate-100">
+                                                    ₹{p.selling_price?.toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => startEdit(p)}
+                                                        className="h-8 w-8 text-amber-600 hover:bg-amber-500/10"
+                                                    >
+                                                        <Edit3 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Edit Dialog */}
+                <Dialog
+                    isOpen={!!editing}
+                    onClose={() => setEditing(null)}
+                    title="Edit Excise Master Details"
+                >
+                    <div className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Excise Brand Code</label>
+                            <Input
+                                placeholder="e.g. MH-BEER-0042"
+                                value={editing?.excise_code || ""}
+                                onChange={e => setEditing(v => ({ ...v, excise_code: e.target.value }))}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pack Size (ml)</label>
+                            <Input
+                                type="number"
+                                placeholder="e.g. 650"
+                                value={editing?.pack_size_ml || ""}
+                                onChange={e => setEditing(v => ({ ...v, pack_size_ml: e.target.value }))}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Liquor Classification</label>
+                            <select
+                                value={editing?.liquor_type || ""}
+                                onChange={e => setEditing(v => ({ ...v, liquor_type: e.target.value }))}
+                                className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none"
+                            >
+                                <option value="">— Select Type —</option>
+                                {LIQUOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-3">
+                            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+                            <Button variant="gradient" disabled={saving} onClick={saveEdit} className="text-slate-950 font-bold">
+                                {saving ? "Saving..." : "Save Excise Details"}
+                            </Button>
+                        </div>
+                    </div>
+                </Dialog>
+            </div>
+        </AdminLayout>
     );
 }
