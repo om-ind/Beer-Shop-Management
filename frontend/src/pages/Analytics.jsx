@@ -71,13 +71,50 @@ export default function Analytics() {
         );
     }
 
-    const pieData = topProducts.length > 5 ? [
-        ...topProducts.slice(0, 5),
-        {
-            name: "Others",
-            total_quantity: topProducts.slice(5).reduce((acc, p) => acc + (Number(p.total_quantity) || 0), 0)
-        }
-    ] : topProducts;
+    const formattedProducts = topProducts
+        .map(p => ({
+            name: p.name,
+            total_quantity: Number(p.total_quantity) || 0
+        }))
+        .filter(p => p.total_quantity > 0);
+
+    const totalVolume = formattedProducts.reduce((sum, p) => sum + p.total_quantity, 0);
+
+    let rawPieData = [];
+    if (formattedProducts.length > 5) {
+        const top5 = formattedProducts.slice(0, 5);
+        const othersQty = formattedProducts.slice(5).reduce((sum, p) => sum + p.total_quantity, 0);
+        rawPieData = [...top5, { name: "Others", total_quantity: othersQty }];
+    } else {
+        rawPieData = formattedProducts;
+    }
+
+    const pieData = rawPieData.map(p => ({
+        ...p,
+        percentage: totalVolume > 0 ? Number(((p.total_quantity / totalVolume) * 100).toFixed(1)) : 0
+    }));
+
+    const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+        if (percent < 0.04) return null;
+        const RADIAN = Math.PI / 180;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text
+                x={x}
+                y={y}
+                fill="#ffffff"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={10}
+                fontWeight="700"
+            >
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
 
     return (
         <AdminLayout>
@@ -203,15 +240,22 @@ export default function Analytics() {
                                         nameKey="name"
                                         cx="50%"
                                         cy="38%"
-                                        outerRadius={65}
+                                        outerRadius={70}
                                         innerRadius={30}
                                         paddingAngle={3}
+                                        label={renderPieLabel}
+                                        labelLine={false}
                                     >
                                         {pieData.map((_, i) => (
                                             <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <PieTooltip formatter={(v, n) => [`${v} units`, n]} />
+                                    <PieTooltip
+                                        formatter={(val, name, item) => [
+                                            `${val} units (${item.payload.percentage || 0}%)`,
+                                            name
+                                        ]}
+                                    />
                                     <Legend
                                         verticalAlign="bottom"
                                         align="center"
@@ -223,7 +267,10 @@ export default function Analytics() {
                                             overflowY: "auto",
                                             paddingTop: "6px"
                                         }}
-                                        formatter={(value) => (value.length > 22 ? `${value.slice(0, 20)}...` : value)}
+                                        formatter={(val, entry) => {
+                                            const truncated = val.length > 15 ? `${val.slice(0, 13)}...` : val;
+                                            return `${truncated} (${entry.payload.percentage || 0}%)`;
+                                        }}
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
