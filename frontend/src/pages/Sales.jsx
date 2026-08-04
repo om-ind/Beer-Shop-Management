@@ -41,6 +41,7 @@ export default function Sales() {
 
     useEffect(() => {
         loadCustomers();
+        fetchProducts("");
     }, []);
 
     async function loadCustomers() {
@@ -55,16 +56,19 @@ export default function Sales() {
         }
     }
 
-    async function handleSearch(e) {
-        const value = e.target.value;
-        setKeyword(value);
-        if (value.length < 2) { setProducts([]); return; }
+    async function fetchProducts(query = "") {
         try {
-            const data = await searchProducts(value);
-            setProducts(data);
+            const data = await searchProducts(query);
+            setProducts(data || []);
         } catch (err) {
             console.error(err);
         }
+    }
+
+    async function handleSearch(e) {
+        const value = e.target.value;
+        setKeyword(value);
+        fetchProducts(value);
     }
 
     function addToCart(product) {
@@ -76,8 +80,7 @@ export default function Sales() {
         } else {
             setCart([...cart, { ...product, quantity: 1 }]);
         }
-        setKeyword("");
-        setProducts([]);
+        toast.info(`Added "${product.name}" to cart`);
     }
 
     function increaseQty(id) {

@@ -15,30 +15,37 @@ def search_products():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    search = f"%{keyword}%"
-
-    if role == "Admin":
-        filter_shop = request.args.get("shop_id", type=int) or shop_id
+    if keyword.strip():
+        search = f"%{keyword.strip()}%"
+        if filter_shop:
+            cursor.execute("""
+                SELECT * FROM products
+                WHERE (barcode LIKE %s OR name LIKE %s OR brand LIKE %s)
+                AND shop_id = %s
+                ORDER BY name
+                LIMIT 50
+            """, (search, search, search, filter_shop))
+        else:
+            cursor.execute("""
+                SELECT * FROM products
+                WHERE barcode LIKE %s OR name LIKE %s OR brand LIKE %s
+                ORDER BY name
+                LIMIT 50
+            """, (search, search, search))
     else:
-        filter_shop = shop_id
-
-    if filter_shop:
-        cursor.execute("""
-            SELECT *
-            FROM products
-            WHERE (barcode LIKE %s OR name LIKE %s OR brand LIKE %s)
-            AND shop_id = %s
-            ORDER BY name
-            LIMIT 20
-        """, (search, search, search, filter_shop))
-    else:
-        cursor.execute("""
-            SELECT *
-            FROM products
-            WHERE barcode LIKE %s OR name LIKE %s OR brand LIKE %s
-            ORDER BY name
-            LIMIT 20
-        """, (search, search, search))
+        if filter_shop:
+            cursor.execute("""
+                SELECT * FROM products
+                WHERE shop_id = %s
+                ORDER BY stock DESC, name ASC
+                LIMIT 50
+            """, (filter_shop,))
+        else:
+            cursor.execute("""
+                SELECT * FROM products
+                ORDER BY stock DESC, name ASC
+                LIMIT 50
+            """)
 
     products = cursor.fetchall()
     cursor.close()
