@@ -26,7 +26,8 @@ CRITICAL INSTRUCTIONS:
 1. Read the EXACT volume/size for each item carefully (e.g. 650ml, 500ml, 330ml, 750ml, 180ml). Do NOT confuse 650ml with 500ml.
 2. Put the full product name including volume in "product_name" (e.g. "KINGFISHER CAN 500ml" or "LONDON PILSNER BOTTLE 650ml").
 3. Special brand & variant rules:
-   - For all beer brands (e.g., London Pilsner, Kingfisher, Haywards, Tuborg, Carlsberg): "Mild", "Prem", and "Premium" are synonymous. Treat "Mild", "Prem", and "Premium" as the same variant.
+   - For all beer brands (e.g., London Pilsner, Kingfisher, Haywards, Tuborg, Carlsberg): "Mild", "Prem", "Premum", and "Premium" are synonymous.
+   - If a bill lists "London Pilsner" without specifying a variant, treat it as "London Pilsner Premium" (the Mild/Prem/Premium variant).
    - Only label as "Strong" if the bill explicitly states "Strong" or "Super Strong".
 4. For quantity:
    - Extract the number of cases/cartons listed on the bill into "carton_qty".
@@ -133,22 +134,28 @@ def extract_with_gemini(filepath):
 
 
 def normalize_beer_variant_name(name):
-    """Normalize variant names across all brands (mild / prem / premium -> premium)."""
+    """Normalize variant names across all brands (mild / prem / premum / premium -> premium)."""
     if not name:
         return ""
     n = name.lower()
-    if "strong" in n:
+    if "super strong" in n:
         n = n.replace("super strong", "strong")
     
-    # Treat mild, prem, premium as identical for all brands
+    # Treat mild, prem, premum as premium for all brands
     words = n.split()
     norm_words = []
     for w in words:
-        if w in ["mild", "prem"]:
+        if w in ["mild", "prem", "premum"]:
             norm_words.append("premium")
         else:
             norm_words.append(w)
-    return " ".join(norm_words)
+    n = " ".join(norm_words)
+
+    # If London Pilsner has no variant specified (neither strong nor premium), default to premium
+    if "london pilsner" in n and "strong" not in n and "premium" not in n:
+        n = n.replace("london pilsner", "london pilsner premium")
+
+    return n
 
 
 def match_similar_products(extracted_items, shop_id):
