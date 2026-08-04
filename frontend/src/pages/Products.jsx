@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import ProductModal from "../components/ProductModal";
 import { toast } from "react-toastify";
-import { Package, Plus, Search, Edit3, Trash2, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Package, Plus, Search, Edit3, Trash2, AlertTriangle, CheckCircle2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { getProducts, addProduct, updateProduct, deleteProduct, checkProductLinks, forceDeleteProduct } from "../services/productService";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -21,6 +21,8 @@ export default function Products() {
     const [linkInfo, setLinkInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [categoryFilter, setCategoryFilter] = useState("All");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     useEffect(() => {
         loadProducts();
@@ -40,6 +42,7 @@ export default function Products() {
             );
         }
         setFiltered(result);
+        setCurrentPage(1);
     }, [search, products, categoryFilter]);
 
     async function loadProducts() {
@@ -108,6 +111,10 @@ export default function Products() {
 
     const categories = ["All", ...new Set(products.map(p => p.category).filter(Boolean))];
     const lowStockCount = products.filter(p => p.stock <= p.minimum_stock).length;
+
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedProducts = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     return (
         <AdminLayout>
@@ -212,7 +219,7 @@ export default function Products() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filtered.map(product => {
+                                        paginatedProducts.map(product => {
                                             const isLow = product.stock <= product.minimum_stock;
                                             return (
                                                 <TableRow key={product.id}>
@@ -279,6 +286,65 @@ export default function Products() {
                                     )}
                                 </TableBody>
                             </Table>
+                        )}
+
+                        {/* Pagination Footer */}
+                        {!loading && filtered.length > 0 && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-slate-200 dark:border-slate-800">
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    Showing <span className="font-semibold text-slate-700 dark:text-slate-200">{startIndex + 1}</span> to{" "}
+                                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                        {Math.min(startIndex + ITEMS_PER_PAGE, filtered.length)}
+                                    </span>{" "}
+                                    of <span className="font-semibold text-slate-700 dark:text-slate-200">{filtered.length}</span> products
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        className="h-8 px-2 rounded-lg text-xs"
+                                    >
+                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                        Previous
+                                    </Button>
+
+                                    <div className="flex items-center gap-1 mx-2">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                                            .map((page, index, array) => {
+                                                const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                                                return (
+                                                    <div key={page} className="flex items-center gap-1">
+                                                        {showEllipsisBefore && <span className="text-slate-400 text-xs px-1">...</span>}
+                                                        <Button
+                                                            variant={currentPage === page ? "default" : "outline"}
+                                                            size="sm"
+                                                            onClick={() => setCurrentPage(page)}
+                                                            className={`h-8 w-8 p-0 rounded-lg text-xs font-semibold ${
+                                                                currentPage === page ? "bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold" : ""
+                                                            }`}
+                                                        >
+                                                            {page}
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        className="h-8 px-2 rounded-lg text-xs"
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
