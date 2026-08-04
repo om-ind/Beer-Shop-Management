@@ -5,15 +5,17 @@ import sys
 # Import config from backend
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 try:
-    from config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+    from config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
 except ImportError:
     DB_HOST = "localhost"
     DB_USER = "root"
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-    DB_NAME = "beer_shop_v2"
+    DB_NAME = "defaultdb"
+    DB_PORT = 3306
 
 config = {
     'host': DB_HOST,
+    'port': DB_PORT,
     'user': DB_USER,
     'password': DB_PASSWORD
 }
