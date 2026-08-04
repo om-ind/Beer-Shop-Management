@@ -205,7 +205,9 @@ export default function Sales() {
                             {/* Product Search */}
                             <Card>
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Search Catalog</CardTitle>
+                                    <CardTitle className="text-xs uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
+                                        Search Catalog
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <ProductSearch keyword={keyword} onSearch={handleSearch} />
@@ -216,7 +218,7 @@ export default function Sales() {
                             {/* Cart Table */}
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">
+                                    <CardTitle className="text-xs uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
                                         Current Cart ({itemCount} items)
                                     </CardTitle>
                                     {cart.length > 0 && (
@@ -249,24 +251,25 @@ export default function Sales() {
                             {/* Customer Select */}
                             <Card>
                                 <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                                    <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Customer Details</CardTitle>
-                                    <Button
+                                    <CardTitle className="text-xs uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
+                                        Customer Details
+                                    </CardTitle>
+                                    <button
                                         id="add-customer-pos-btn"
-                                        variant="ghost"
-                                        size="sm"
+                                        type="button"
                                         onClick={() => setShowAddCustomerModal(true)}
-                                        className="h-7 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40 font-semibold px-2 rounded-lg"
+                                        className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-3 rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition"
                                     >
-                                        <UserPlus className="h-3.5 w-3.5 mr-1" />
-                                        <span>Add Customer</span>
-                                    </Button>
+                                        <UserPlus className="h-4 w-4" />
+                                        <span>+ Add Customer</span>
+                                    </button>
                                 </CardHeader>
                                 <CardContent>
                                     <select
                                         id="customer-select"
                                         value={selectedCustomer}
                                         onChange={e => setSelectedCustomer(Number(e.target.value))}
-                                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                                        className="w-full h-11 rounded-xl border-2 border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500"
                                     >
                                         {customers.map(c => (
                                             <option key={c.id} value={c.id}>
