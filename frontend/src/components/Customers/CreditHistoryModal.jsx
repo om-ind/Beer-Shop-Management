@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import {
     FaTimes, FaWallet, FaPlus, FaArrowUp, FaArrowDown,
-    FaHistory, FaRupeeSign, FaCalendarAlt, FaPen
+    FaHistory, FaRupeeSign, FaCalendarAlt, FaPen, FaWhatsapp, FaPrint
 } from "react-icons/fa";
 import { getCreditHistory, addCreditPayment, addCreditTransaction } from "../../services/customerService";
 
@@ -43,6 +43,99 @@ export default function CreditHistoryModal({ customer, onClose, onBalanceUpdate 
 
     function togglePanel(panel) {
         setActivePanel(prev => prev === panel ? PANEL.NONE : panel);
+    }
+
+    // ---- Send WhatsApp Payment Reminder ----
+    function handleWhatsAppReminder() {
+        if (!customer.mobile) {
+            toast.warning("Customer mobile number is missing!");
+            return;
+        }
+        const cleanMobile = customer.mobile.replace(/\D/g, "");
+        const formattedMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+        const msg = `Hello ${customer.name},\n\nThis is a friendly reminder regarding your outstanding credit balance at *B N BEER SHOP*.\n\n*Outstanding Balance: ₹${Number(balance).toFixed(2)}*\n\nKindly arrange to clear your dues at your earliest convenience. Thank you!\n\n— B N Beer Shop Management`;
+        const url = `https://api.whatsapp.com/send?phone=${formattedMobile}&text=${encodeURIComponent(msg)}`;
+        window.open(url, "_blank");
+    }
+
+    // ---- Print Khatabook Account Statement ----
+    function handlePrintStatement() {
+        if (!data?.history) return;
+        const printWindow = window.open("", "_blank", "width=850,height=900");
+        const historyRows = data.history.map(entry => {
+            const isDebit = entry.amount < 0;
+            const dateStr = entry.payment_date
+                ? new Date(entry.payment_date).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                : "—";
+            return `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px; font-size: 13px;">${dateStr}</td>
+                    <td style="padding: 10px; font-size: 13px; font-weight: bold;">${entry.remarks || (isDebit ? "Credit Sale (Dia)" : "Payment (Liya)")}</td>
+                    <td style="padding: 10px; font-size: 13px; text-align: right; color: ${isDebit ? '#dc2626' : '#94a3b8'}; font-weight: bold;">
+                        ${isDebit ? `₹${Math.abs(entry.amount).toFixed(2)}` : "-"}
+                    </td>
+                    <td style="padding: 10px; font-size: 13px; text-align: right; color: ${!isDebit ? '#16a34a' : '#94a3b8'}; font-weight: bold;">
+                        ${!isDebit ? `₹${Math.abs(entry.amount).toFixed(2)}` : "-"}
+                    </td>
+                </tr>
+            `;
+        }).join("");
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Khatabook Statement - ${customer.name}</title>
+                    <style>
+                        body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #0f172a; }
+                        .header { text-align: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 16px; margin-bottom: 24px; }
+                        .header h1 { margin: 0; color: #d97706; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+                        .header p { margin: 4px 0 0 0; color: #64748b; font-size: 13px; font-weight: 600; }
+                        .meta { display: flex; justify-content: space-between; margin-bottom: 24px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
+                        .table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+                        .table th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; }
+                        .summary { margin-top: 24px; text-align: right; font-size: 16px; font-weight: bold; border-top: 2px solid #cbd5e1; padding-top: 16px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>B N BEER SHOP</h1>
+                        <p>CUSTOMER CREDIT LEDGER STATEMENT (KHATABOOK)</p>
+                    </div>
+                    <div class="meta">
+                        <div>
+                            <strong>Customer Name:</strong> ${customer.name}<br/>
+                            <strong>Mobile:</strong> ${customer.mobile || "N/A"}<br/>
+                            <strong>Address:</strong> ${customer.address || "N/A"}
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>Statement Date:</strong> ${new Date().toLocaleDateString("en-IN")}<br/>
+                            <strong>Total Entries:</strong> ${data.history.length}<br/>
+                            <strong style="color: ${balance > 0 ? '#dc2626' : '#16a34a'}; font-size: 17px;">Net Balance: ₹${Number(balance).toFixed(2)}</strong>
+                        </div>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Description / Remarks</th>
+                                <th style="text-align: right;">You Gave (Dia ₹)</th>
+                                <th style="text-align: right;">You Got (Liya ₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${historyRows}
+                        </tbody>
+                    </table>
+                    <div class="summary">
+                        Net Outstanding Balance: <span style="color: ${balance > 0 ? '#dc2626' : '#16a34a'}; font-size: 20px;">₹${Number(balance).toFixed(2)}</span>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); }
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     }
 
     // ---- Collect payment (repayment against balance) ----
@@ -107,9 +200,19 @@ export default function CreditHistoryModal({ customer, onClose, onBalanceUpdate 
                             <p className="text-xs text-slate-400 dark:text-slate-500">Credit Account · {customer.mobile || "No mobile"}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 transition">
-                        <FaTimes />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Print Statement Button */}
+                        <button
+                            onClick={handlePrintStatement}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-700"
+                            title="Print Khatabook PDF Statement"
+                        >
+                            <FaPrint /> Statement
+                        </button>
+                        <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 transition">
+                            <FaTimes />
+                        </button>
+                    </div>
                 </div>
 
                 {/* ── Scrollable Body Area ── */}
@@ -122,43 +225,53 @@ export default function CreditHistoryModal({ customer, onClose, onBalanceUpdate 
                     }`}>
                         <div className="flex items-center justify-between mb-3">
                             <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Outstanding Balance</p>
-                                <p className={`text-3xl font-bold ${balance > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Outstanding Net Balance</p>
+                                <p className={`text-3xl font-extrabold ${balance > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                                     ₹{Number(balance).toFixed(2)}
                                 </p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                                    {balance > 0 ? "Amount owed by customer" : "No outstanding dues ✓"}
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-medium">
+                                    {balance > 0 ? "Customer owes you (Dia)" : "No outstanding dues ✓"}
                                 </p>
                             </div>
-                        </div>
 
-                        {/* Action buttons row */}
-                        <div className="flex gap-2">
-                            {/* Collect Payment — only if balance > 0 */}
+                            {/* WhatsApp Reminder Button */}
                             {balance > 0 && (
                                 <button
-                                    id="collect-payment-btn"
-                                    onClick={() => togglePanel(PANEL.COLLECT)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                                        activePanel === PANEL.COLLECT
-                                            ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20"
-                                            : "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                                    }`}
+                                    onClick={handleWhatsAppReminder}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95"
+                                    title="Send WhatsApp Payment Link & Reminder"
                                 >
-                                    <FaRupeeSign /> Collect Payment
+                                    <FaWhatsapp className="text-sm" /> WhatsApp
                                 </button>
                             )}
-                            {/* Add Transaction — always visible */}
+                        </div>
+
+                        {/* Action buttons row — Khatabook Dia / Liya */}
+                        <div className="flex gap-2">
+                            {/* You Got (Liya) / Collect Payment */}
                             <button
-                                id="add-txn-btn"
-                                onClick={() => togglePanel(PANEL.ADD_TXN)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                                    activePanel === PANEL.ADD_TXN
-                                        ? "bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20"
-                                        : "bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-900 hover:bg-violet-50 dark:hover:bg-violet-950/40"
+                                id="collect-payment-btn"
+                                onClick={() => togglePanel(PANEL.COLLECT)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                                    activePanel === PANEL.COLLECT
+                                        ? "bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20"
+                                        : "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                                 }`}
                             >
-                                <FaPen /> Add Transaction
+                                <FaRupeeSign /> You Got (Liya ₹)
+                            </button>
+
+                            {/* You Gave (Dia) / Add Debit */}
+                            <button
+                                id="add-txn-btn"
+                                onClick={() => { setTxnType("debit"); togglePanel(PANEL.ADD_TXN); }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                                    activePanel === PANEL.ADD_TXN && txnType === "debit"
+                                        ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
+                                        : "bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                }`}
+                            >
+                                <FaPen /> You Gave (Dia ₹)
                             </button>
                         </div>
                     </div>

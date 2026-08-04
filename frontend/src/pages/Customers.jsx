@@ -3,7 +3,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import CustomerModal from "../components/Customers/CustomerModal";
 import CreditHistoryModal from "../components/Customers/CreditHistoryModal";
 import { toast } from "react-toastify";
-import { Users, Plus, Search, Edit3, Trash2, Wallet, Phone, History, Loader2 } from "lucide-react";
+import { Users, Plus, Search, Edit3, Trash2, Wallet, Phone, History, Loader2, MessageSquare } from "lucide-react";
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer, checkCustomerLinks, forceDeleteCustomer } from "../services/customerService";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -229,13 +229,30 @@ export default function Customers() {
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <div className="flex items-center justify-center gap-1">
+                                                            {hasCredit && customer.mobile && (
+                                                                <Button
+                                                                    id={`whatsapp-reminder-${customer.id}`}
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => {
+                                                                        const cleanMobile = customer.mobile.replace(/\D/g, "");
+                                                                        const formattedMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+                                                                        const msg = `Hello ${customer.name},\n\nThis is a friendly reminder regarding your outstanding credit balance at *B N BEER SHOP*.\n\n*Outstanding Balance: ₹${credit.toFixed(2)}*\n\nKindly arrange to clear your dues at your earliest convenience. Thank you!`;
+                                                                        window.open(`https://api.whatsapp.com/send?phone=${formattedMobile}&text=${encodeURIComponent(msg)}`, "_blank");
+                                                                    }}
+                                                                    className="h-8 w-8 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                                                                    title="Send WhatsApp Reminder"
+                                                                >
+                                                                    <MessageSquare className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 id={`credit-history-${customer.id}`}
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setCreditCustomer(customer)}
                                                                 className="h-8 w-8 text-purple-600 hover:bg-purple-500/10"
-                                                                title="Credit Ledger"
+                                                                title="Credit Ledger (Khatabook)"
                                                             >
                                                                 <History className="h-4 w-4" />
                                                             </Button>
