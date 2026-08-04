@@ -23,11 +23,11 @@ EXTRACTION_PROMPT = """You are a bill/invoice data extraction assistant for an I
 Analyze this purchase bill image/document and extract all invoice details and line items (products) into JSON.
 
 CRITICAL INSTRUCTIONS:
-1. Read the EXACT volume for each item carefully (e.g. 650ml, 500ml, 330ml, 750ml, 180ml). Do NOT confuse 650ml with 500ml.
+1. Read the EXACT volume/size for each item carefully (e.g. 650ml, 500ml, 330ml, 750ml, 180ml). Do NOT confuse 650ml with 500ml.
 2. Put the full product name including volume in "product_name" (e.g. "KINGFISHER CAN 500ml" or "LONDON PILSNER BOTTLE 650ml").
-3. Special brand rules:
-   - For "London Pilsner": "London Pilsner" or "London Pilsner Mild" means "London Pilsner Premium". Mild and Premium are identical for London Pilsner.
-   - Only label as "London Pilsner Strong" if the bill explicitly states "Strong" or "Super Strong".
+3. Special brand & variant rules:
+   - For all beer brands (e.g., London Pilsner, Kingfisher, Haywards, Tuborg, Carlsberg): "Mild", "Prem", and "Premium" are synonymous. Treat "Mild", "Prem", and "Premium" as the same variant.
+   - Only label as "Strong" if the bill explicitly states "Strong" or "Super Strong".
 4. For quantity:
    - Extract the number of cases/cartons listed on the bill into "carton_qty".
    - Extract the unit type (Case/Carton or Bottle/Can) into "unit_type".
@@ -133,20 +133,22 @@ def extract_with_gemini(filepath):
 
 
 def normalize_beer_variant_name(name):
-    """Normalize beer variant names (e.g., London Pilsner / London Pilsner Mild -> London Pilsner Premium)."""
+    """Normalize variant names across all brands (mild / prem / premium -> premium)."""
     if not name:
         return ""
     n = name.lower()
-    if "london pilsner" in n:
-        if "strong" in n:
-            return n.replace("super strong", "strong")
+    if "strong" in n:
+        n = n.replace("super strong", "strong")
+    
+    # Treat mild, prem, premium as identical for all brands
+    words = n.split()
+    norm_words = []
+    for w in words:
+        if w in ["mild", "prem"]:
+            norm_words.append("premium")
         else:
-            # Mild and Premium are synonymous for London Pilsner
-            n = n.replace("mild", "premium")
-            if "premium" not in n:
-                n = n.replace("london pilsner", "london pilsner premium")
-            return n
-    return n
+            norm_words.append(w)
+    return " ".join(norm_words)
 
 
 def match_similar_products(extracted_items, shop_id):
@@ -182,25 +184,31 @@ def match_similar_products(extracted_items, shop_id):
             p_name_lower = product_name.lower()
             norm_extracted_name = normalize_beer_variant_name(product_name)
 
-            # Determine volume multiplier
+            # Determine volume multiplier & size label
             if "650" in vol_str or "650" in p_name_lower:
                 multiplier = 12
                 volume_tag = "650"
+                size_label = "650ml"
             elif "500" in vol_str or "500" in p_name_lower:
                 multiplier = 24
                 volume_tag = "500"
+                size_label = "500ml"
             elif "330" in vol_str or "330" in p_name_lower:
                 multiplier = 24
                 volume_tag = "330"
+                size_label = "330ml"
             elif "750" in vol_str or "750" in p_name_lower:
                 multiplier = 12
                 volume_tag = "750"
+                size_label = "750ml"
             elif "180" in vol_str or "180" in p_name_lower:
                 multiplier = 48
                 volume_tag = "180"
+                size_label = "180ml"
             else:
                 multiplier = 12
                 volume_tag = ""
+                size_label = item.get("volume") or ""
 
             carton_qty = float(item.get("carton_qty") or item.get("quantity") or 1)
             unit_type = (item.get("unit_type") or "Case").strip().lower()
@@ -240,8 +248,8 @@ def match_similar_products(extracted_items, shop_id):
                 # Strict penalty if one is "strong" and the other is "premium/mild"
                 is_extracted_strong = "strong" in norm_extracted_name
                 is_ep_strong = "strong" in norm_ep_name
-                if is_extracted_strong != is_ep_strong and "london pilsner" in norm_extracted_name:
-                    continue  # Skip mismatching London Pilsner variant
+                if is_extracted_strong != is_ep_strong:
+                    continue  # Skip mismatching Strong vs Mild/Premium variant
 
                 if norm_ep_name == norm_extracted_name or ep_name == p_name_lower:
                     score += 100
@@ -289,6 +297,9 @@ def match_similar_products(extracted_items, shop_id):
                 "extracted_name": product_name,
                 "brand": brand,
                 "category": category,
+                "volume": size_label,
+                "carton_qty": carton_qty,
+                "unit_type": unit_type,
                 "quantity": total_qty,
                 "purchase_price": per_unit_price if per_unit_price > 0 else (best_match["purchase_price"] if best_match else 0.0),
                 "selling_price": best_match["selling_price"] if best_match else selling_price,

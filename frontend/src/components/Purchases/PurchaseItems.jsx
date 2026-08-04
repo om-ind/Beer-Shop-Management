@@ -76,6 +76,11 @@ export default function PurchaseItems({ items, setItems, allProducts = [] }) {
                                 <td className="p-3 text-left">
                                     <div className="font-semibold text-slate-800 flex items-center gap-2 flex-wrap">
                                         <span>{item.name}</span>
+                                        {item.volume && (
+                                            <span className="text-[11px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">
+                                                {item.volume}
+                                            </span>
+                                        )}
                                         {item.is_new ? (
                                             <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
                                                 ✨ New Product
@@ -122,6 +127,11 @@ export default function PurchaseItems({ items, setItems, allProducts = [] }) {
                                         onChange={(e) => updateQty(index, e.target.value)}
                                         className="border border-slate-300 rounded-lg w-20 p-1.5 text-center font-bold text-slate-900 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                     />
+                                    {item.carton_qty && (
+                                        <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                                            ({item.carton_qty} {item.unit_type || "cases"})
+                                        </div>
+                                    )}
                                 </td>
 
                                 <td className="p-3 text-right">
