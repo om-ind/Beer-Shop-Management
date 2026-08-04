@@ -8,46 +8,69 @@ products_bp = Blueprint("products", __name__)
 @products_bp.route("/products/search", methods=["GET"])
 @token_required
 def search_products():
-    keyword = request.args.get("q", "")
-    shop_id = g.user.get("shop_id")
+    keyword = request.args.get("q", "").strip()
+    user_shop_id = g.user.get("shop_id")
     role = g.user.get("role")
+
+    filter_shop = request.args.get("shop_id", type=int) or user_shop_id
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    if keyword.strip():
-        search = f"%{keyword.strip()}%"
+    if keyword:
+        search = f"%{keyword}%"
         if filter_shop:
             cursor.execute("""
                 SELECT * FROM products
                 WHERE (barcode LIKE %s OR name LIKE %s OR brand LIKE %s)
-                AND shop_id = %s
-                ORDER BY name
+                AND (shop_id = %s OR shop_id IS NULL)
+                ORDER BY stock DESC, name ASC
                 LIMIT 50
             """, (search, search, search, filter_shop))
+            products = cursor.fetchall()
+
+            # Fallback: if no products found for specific shop_id, search across all products in DB!
+            if not products:
+                cursor.execute("""
+                    SELECT * FROM products
+                    WHERE (barcode LIKE %s OR name LIKE %s OR brand LIKE %s)
+                    ORDER BY stock DESC, name ASC
+                    LIMIT 50
+                """, (search, search, search))
+                products = cursor.fetchall()
         else:
             cursor.execute("""
                 SELECT * FROM products
-                WHERE barcode LIKE %s OR name LIKE %s OR brand LIKE %s
-                ORDER BY name
+                WHERE (barcode LIKE %s OR name LIKE %s OR brand LIKE %s)
+                ORDER BY stock DESC, name ASC
                 LIMIT 50
             """, (search, search, search))
+            products = cursor.fetchall()
     else:
         if filter_shop:
             cursor.execute("""
                 SELECT * FROM products
-                WHERE shop_id = %s
+                WHERE (shop_id = %s OR shop_id IS NULL)
                 ORDER BY stock DESC, name ASC
                 LIMIT 50
             """, (filter_shop,))
+            products = cursor.fetchall()
+
+            if not products:
+                cursor.execute("""
+                    SELECT * FROM products
+                    ORDER BY stock DESC, name ASC
+                    LIMIT 50
+                """)
+                products = cursor.fetchall()
         else:
             cursor.execute("""
                 SELECT * FROM products
                 ORDER BY stock DESC, name ASC
                 LIMIT 50
             """)
+            products = cursor.fetchall()
 
-    products = cursor.fetchall()
     cursor.close()
     conn.close()
 
