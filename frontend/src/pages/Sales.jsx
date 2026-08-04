@@ -6,10 +6,11 @@ import ProductSearch from "../components/Sales/ProductSearch";
 import SearchResults from "../components/Sales/SearchResults";
 import CartTable from "../components/Sales/CartTable";
 import SalesHistory from "../components/Sales/SalesHistory";
+import CustomerModal from "../components/Customers/CustomerModal";
 import { toast } from "react-toastify";
-import { ShoppingCart, History, Trash2, CheckCircle2, AlertTriangle, CreditCard, Wallet, QrCode, User } from "lucide-react";
+import { ShoppingCart, History, Trash2, CheckCircle2, AlertTriangle, CreditCard, Wallet, QrCode, User, UserPlus } from "lucide-react";
 import { searchProducts, createSale } from "../services/salesService";
-import { getCustomers } from "../services/customerService";
+import { getCustomers, addCustomer } from "../services/customerService";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -30,6 +31,7 @@ export default function Sales() {
     const [cart, setCart] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(1);
+    const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
     const [saleDate, setSaleDate] = useState(today());
     const [paymentMode, setPaymentMode] = useState("Cash");
     const [invoiceNo, setInvoiceNo] = useState("");
@@ -243,8 +245,18 @@ export default function Sales() {
                         <div className="space-y-6">
                             {/* Customer Select */}
                             <Card>
-                                <CardHeader className="pb-3">
+                                <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                                     <CardTitle className="text-xs uppercase tracking-wider text-slate-500">Customer Details</CardTitle>
+                                    <Button
+                                        id="add-customer-pos-btn"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowAddCustomerModal(true)}
+                                        className="h-7 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40 font-semibold px-2 rounded-lg"
+                                    >
+                                        <UserPlus className="h-3.5 w-3.5 mr-1" />
+                                        <span>Add Customer</span>
+                                    </Button>
                                 </CardHeader>
                                 <CardContent>
                                     <select
@@ -254,7 +266,9 @@ export default function Sales() {
                                         className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
                                     >
                                         {customers.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                            <option key={c.id} value={c.id}>
+                                                {c.name} {c.mobile ? `(${c.mobile})` : ""}
+                                            </option>
                                         ))}
                                     </select>
                                 </CardContent>
@@ -374,6 +388,30 @@ export default function Sales() {
                         customer={customers.find(c => c.id === selectedCustomer)?.name}
                         payment={paymentMode}
                         onClose={() => setShowInvoice(false)}
+                    />
+                )}
+
+                {/* Add Customer Quick Modal */}
+                {showAddCustomerModal && (
+                    <CustomerModal
+                        onClose={() => setShowAddCustomerModal(false)}
+                        onSave={async (formData) => {
+                            try {
+                                const created = await addCustomer(formData);
+                                toast.success(`Customer "${formData.name}" created!`);
+                                const updatedList = await getCustomers();
+                                setCustomers(updatedList);
+                                if (created?.id) {
+                                    setSelectedCustomer(created.id);
+                                } else if (updatedList && updatedList.length > 0) {
+                                    const match = updatedList.find(c => c.name.toLowerCase() === formData.name.trim().toLowerCase());
+                                    if (match) setSelectedCustomer(match.id);
+                                }
+                                setShowAddCustomerModal(false);
+                            } catch (err) {
+                                toast.error(err.response?.data?.error || "Failed to add customer");
+                            }
+                        }}
                     />
                 )}
 
