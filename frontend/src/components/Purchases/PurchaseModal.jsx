@@ -203,21 +203,21 @@ export default function PurchaseModal({ onClose, onSave }) {
     const newProductCount = items.filter(i => i.is_new).length;
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-            <div className="bg-white rounded-2xl w-[940px] max-h-[90vh] overflow-auto p-0 shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-800 text-slate-100 rounded-2xl w-full max-w-[940px] max-h-[90vh] overflow-auto p-0 shadow-2xl">
 
                 {/* Header */}
-                <div className="sticky top-0 bg-white z-10 border-b border-slate-100 px-6 pt-5 pb-0">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-4">New Purchase</h2>
+                <div className="sticky top-0 bg-slate-900 z-10 border-b border-slate-800 px-6 pt-5 pb-4">
+                    <h2 className="text-2xl font-bold font-display text-white mb-4">New Purchase</h2>
 
                     {/* Tabs */}
-                    <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                    <div className="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
                         <button
                             onClick={() => setActiveTab("manual")}
                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
                                 activeTab === "manual"
-                                    ? "bg-white text-slate-800 shadow-sm"
-                                    : "text-slate-500 hover:text-slate-700"
+                                    ? "bg-slate-800 text-white shadow-sm"
+                                    : "text-slate-400 hover:text-slate-200"
                             }`}
                         >
                             <FaKeyboard /> Manual Entry
@@ -226,8 +226,8 @@ export default function PurchaseModal({ onClose, onSave }) {
                             onClick={() => setActiveTab("scan")}
                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
                                 activeTab === "scan"
-                                    ? "bg-white text-slate-800 shadow-sm"
-                                    : "text-slate-500 hover:text-slate-700"
+                                    ? "bg-slate-800 text-white shadow-sm"
+                                    : "text-slate-400 hover:text-slate-200"
                             }`}
                         >
                             <FaCamera /> Scan Bill
@@ -240,9 +240,9 @@ export default function PurchaseModal({ onClose, onSave }) {
                     {/* Scan Tab */}
                     {activeTab === "scan" && (
                         <div className="space-y-4">
-                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                <p className="text-blue-700 text-sm">
-                                    <strong>How it works:</strong> Upload a photo or PDF of your supplier bill.
+                            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                                <p className="text-blue-300 text-sm">
+                                    <strong className="text-blue-200">How it works:</strong> Upload a photo or PDF of your supplier bill.
                                     AI will extract MVAT, TCS, Invoice No, Date, supplier total amount, and line items.
                                     You can match existing inventory or create new products before saving.
                                 </p>
@@ -254,7 +254,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                             />
 
                             {scanError && (
-                                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-300 text-sm">
                                     <strong>Error:</strong> {scanError}
                                 </div>
                             )}
@@ -267,13 +267,13 @@ export default function PurchaseModal({ onClose, onSave }) {
 
                             {/* Scan success banner */}
                             {scanSuccess && (
-                                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                                    <FaCheckCircle className="text-green-500 text-lg flex-shrink-0 mt-0.5" />
+                                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3">
+                                    <FaCheckCircle className="text-emerald-400 text-lg flex-shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="text-green-700 font-semibold text-sm">
+                                        <p className="text-emerald-300 font-semibold text-sm">
                                             Bill data extracted successfully!
                                         </p>
-                                        <p className="text-green-600 text-xs mt-1">
+                                        <p className="text-emerald-400/80 text-xs mt-1">
                                             {items.length} products found
                                             {newProductCount > 0 && (
                                                 <span className="ml-1">
@@ -287,11 +287,11 @@ export default function PurchaseModal({ onClose, onSave }) {
                             )}
 
                             {/* Supplier & Bill Header Details Section */}
-                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                            <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-bold text-slate-800 text-sm">Supplier & Bill Information</h3>
+                                    <h3 className="font-bold text-slate-200 text-sm">Supplier & Bill Information</h3>
                                     {purchase.bill_total_amount > 0 && (
-                                        <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">
+                                        <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-bold">
                                             Scanned Total: ₹{Number(purchase.bill_total_amount).toLocaleString("en-IN")}
                                         </span>
                                     )}
@@ -299,12 +299,12 @@ export default function PurchaseModal({ onClose, onSave }) {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Supplier</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">Supplier</label>
                                         <select
                                             name="supplier_id"
                                             value={purchase.supplier_id}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2.5 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         >
                                             <option value="">Select Supplier</option>
                                             {suppliers.map((supplier) => (
@@ -316,12 +316,12 @@ export default function PurchaseModal({ onClose, onSave }) {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Payment Mode</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">Payment Mode</label>
                                         <select
                                             name="payment_mode"
                                             value={purchase.payment_mode}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2.5 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         >
                                             <option>Cash</option>
                                             <option>Card</option>
@@ -331,25 +331,25 @@ export default function PurchaseModal({ onClose, onSave }) {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Invoice No</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">Invoice No</label>
                                         <input
                                             type="text"
                                             name="invoice_no"
                                             placeholder="e.g. INV-10045"
                                             value={purchase.invoice_no}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2.5 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Invoice Date</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">Invoice Date</label>
                                         <input
                                             type="date"
                                             name="purchase_date"
                                             value={purchase.purchase_date}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2.5 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         />
                                     </div>
                                 </div>
@@ -357,7 +357,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                                 {/* Taxes breakdown */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">MVAT Amount (₹)</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">MVAT Amount (₹)</label>
                                         <input
                                             type="number"
                                             step="0.01"
@@ -365,12 +365,12 @@ export default function PurchaseModal({ onClose, onSave }) {
                                             placeholder="0.00"
                                             value={purchase.mvat_amount}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">TCS Amount (₹)</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">TCS Amount (₹)</label>
                                         <input
                                             type="number"
                                             step="0.01"
@@ -378,12 +378,12 @@ export default function PurchaseModal({ onClose, onSave }) {
                                             placeholder="0.00"
                                             value={purchase.tcs_amount}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Scanned Total Bill (₹)</label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">Scanned Total Bill (₹)</label>
                                         <input
                                             type="number"
                                             step="0.01"
@@ -391,7 +391,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                                             placeholder="0.00"
                                             value={purchase.bill_total_amount}
                                             onChange={handleChange}
-                                            className="w-full border border-slate-300 rounded-xl p-2 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                            className="w-full border border-slate-800 rounded-xl p-2 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         />
                                     </div>
                                 </div>
@@ -402,24 +402,24 @@ export default function PurchaseModal({ onClose, onSave }) {
                                 placeholder="Remarks"
                                 value={purchase.remarks}
                                 onChange={handleChange}
-                                className="border border-slate-300 rounded-xl w-full p-3 bg-white text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                className="border border-slate-800 rounded-xl w-full p-3 bg-slate-950 text-slate-100 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                             />
 
                             {/* Transport Charge Section */}
-                            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200/80 rounded-2xl p-4 space-y-3 shadow-sm">
+                            <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 space-y-3 shadow-sm">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-orange-800 font-bold text-sm">
-                                        <FaTruck className="text-orange-500 text-lg" />
+                                    <div className="flex items-center gap-2 text-orange-300 font-bold text-sm">
+                                        <FaTruck className="text-orange-400 text-lg" />
                                         <span>Transport Charge per Carton</span>
                                     </div>
-                                    <span className="text-xs text-orange-700 bg-orange-100 px-3 py-1 rounded-full font-bold">
+                                    <span className="text-xs text-orange-300 bg-orange-500/20 border border-orange-500/30 px-3 py-1 rounded-full font-bold">
                                         {totalCartons.toFixed(1)} Total Cartons
                                     </span>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-4 items-center">
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">
                                             Rate per Carton (₹)
                                         </label>
                                         <div className="relative">
@@ -431,25 +431,25 @@ export default function PurchaseModal({ onClose, onSave }) {
                                                 placeholder="e.g. 25"
                                                 value={transportPerCarton}
                                                 onChange={(e) => setTransportPerCarton(e.target.value)}
-                                                className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                                className="w-full pl-7 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-xl font-bold text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">
                                             Added to 500ml Can
                                         </label>
-                                        <div className="py-2 px-3 bg-white border border-slate-200 rounded-xl font-semibold text-slate-600 text-xs">
+                                        <div className="py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl font-semibold text-slate-300 text-xs">
                                             +₹{((Number(transportPerCarton || 0)) / 24).toFixed(2)} / bottle (÷ 24)
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 mb-1">
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">
                                             Added to 650ml Bottle
                                         </label>
-                                        <div className="py-2 px-3 bg-white border border-slate-200 rounded-xl font-semibold text-slate-600 text-xs">
+                                        <div className="py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl font-semibold text-slate-300 text-xs">
                                             +₹{((Number(transportPerCarton || 0)) / 12).toFixed(2)} / bottle (÷ 12)
                                         </div>
                                     </div>
@@ -462,18 +462,18 @@ export default function PurchaseModal({ onClose, onSave }) {
                                 placeholder="Search Product to add..."
                                 value={keyword}
                                 onChange={handleSearch}
-                                className="border border-slate-300 rounded-xl w-full p-3 bg-white text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                className="border border-slate-800 rounded-xl w-full p-3 bg-slate-950 text-slate-100 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                             />
 
                             {products.length > 0 && (
-                                <div className="border border-slate-200 rounded-xl max-h-56 overflow-auto">
+                                <div className="border border-slate-800 rounded-xl max-h-56 overflow-auto bg-slate-950">
                                     {products.map(product => (
                                         <div
                                             key={product.id}
                                             onClick={() => addProduct(product)}
-                                            className="p-3 border-b border-slate-100 hover:bg-orange-50 cursor-pointer transition"
+                                            className="p-3 border-b border-slate-800 hover:bg-orange-500/10 cursor-pointer transition"
                                         >
-                                            <div className="font-semibold text-slate-700">{product.name}</div>
+                                            <div className="font-semibold text-slate-200">{product.name}</div>
                                             <div className="text-sm text-slate-400">{product.brand}</div>
                                         </div>
                                     ))}
@@ -495,7 +495,7 @@ export default function PurchaseModal({ onClose, onSave }) {
 
                                 {/* New product badges */}
                                 {newProductCount > 0 && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-amber-400">
                                         <FaStar className="text-amber-400" />
                                         <span>
                                             {newProductCount} new product{newProductCount > 1 ? "s" : ""} will be added to your inventory
@@ -505,12 +505,12 @@ export default function PurchaseModal({ onClose, onSave }) {
                             </div>
 
                             {/* Footer */}
-                            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                            <div className="flex justify-between items-center pt-4 border-t border-slate-800">
                                 <div>
                                     <div className="text-xs text-slate-400">
                                         Includes ₹{totalTransportCost.toFixed(2)} transport ({totalCartons.toFixed(1)} cartons @ ₹{transportPerCarton}/carton) automatically added to unit prices
                                     </div>
-                                    <h2 className="text-2xl font-bold text-slate-800">
+                                    <h2 className="text-2xl font-bold text-white">
                                         Total Amount ₹{grandTotal.toFixed(2)}
                                     </h2>
                                 </div>
@@ -518,7 +518,7 @@ export default function PurchaseModal({ onClose, onSave }) {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={onClose}
-                                        className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition"
+                                        className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold border border-slate-700 transition"
                                     >
                                         Cancel
                                     </button>
