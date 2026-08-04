@@ -19,11 +19,19 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const currentUser = getCurrentUser();
-        if (currentUser) {
-            setUser(currentUser);
+        try {
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+                setUser(currentUser);
+            } else {
+                setUser(null);
+            }
+        } catch (e) {
+            console.error("AuthContext init error:", e);
+            setUser(null);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     async function login(username, password) {
