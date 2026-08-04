@@ -25,11 +25,14 @@ Analyze this purchase bill image/document and extract all invoice details and li
 CRITICAL INSTRUCTIONS:
 1. Read the EXACT volume for each item carefully (e.g. 650ml, 500ml, 330ml, 750ml, 180ml). Do NOT confuse 650ml with 500ml.
 2. Put the full product name including volume in "product_name" (e.g. "KINGFISHER CAN 500ml" or "LONDON PILSNER BOTTLE 650ml").
-3. For quantity:
+3. Special brand rules:
+   - For "London Pilsner": "London Pilsner" or "London Pilsner Mild" means "London Pilsner Premium". Mild and Premium are identical for London Pilsner.
+   - Only label as "London Pilsner Strong" if the bill explicitly states "Strong" or "Super Strong".
+4. For quantity:
    - Extract the number of cases/cartons listed on the bill into "carton_qty".
    - Extract the unit type (Case/Carton or Bottle/Can) into "unit_type".
    - Extract unit_price (price per case or price per unit as listed on bill) and total_price.
-4. Extract tax & header breakdown:
+5. Extract tax & header breakdown:
    - Extract supplier / vendor business name into "supplier_name".
    - Extract bill / invoice number into "bill_number".
    - Extract bill / invoice date into "bill_date" (in YYYY-MM-DD or readable date string).
@@ -129,6 +132,23 @@ def extract_with_gemini(filepath):
     raise last_error or Exception("All models failed")
 
 
+def normalize_beer_variant_name(name):
+    """Normalize beer variant names (e.g., London Pilsner / London Pilsner Mild -> London Pilsner Premium)."""
+    if not name:
+        return ""
+    n = name.lower()
+    if "london pilsner" in n:
+        if "strong" in n:
+            return n.replace("super strong", "strong")
+        else:
+            # Mild and Premium are synonymous for London Pilsner
+            n = n.replace("mild", "premium")
+            if "premium" not in n:
+                n = n.replace("london pilsner", "london pilsner premium")
+            return n
+    return n
+
+
 def match_similar_products(extracted_items, shop_id):
     """
     Find existing candidate products from stock for each extracted line item.
@@ -158,7 +178,9 @@ def match_similar_products(extracted_items, shop_id):
             brand = (item.get("brand") or "").strip()
             category = (item.get("category") or "Beer").strip()
             vol_str = (item.get("volume") or "").lower()
+
             p_name_lower = product_name.lower()
+            norm_extracted_name = normalize_beer_variant_name(product_name)
 
             # Determine volume multiplier
             if "650" in vol_str or "650" in p_name_lower:
@@ -207,14 +229,21 @@ def match_similar_products(extracted_items, shop_id):
 
             # Rank candidate products from existing inventory
             scored_candidates = []
-            words = [w for w in p_name_lower.replace("-", " ").split() if len(w) > 2]
+            words = [w for w in norm_extracted_name.replace("-", " ").split() if len(w) > 2]
 
             for ep in existing_products:
                 ep_name = (ep["name"] or "").lower()
+                norm_ep_name = normalize_beer_variant_name(ep["name"])
                 ep_brand = (ep["brand"] or "").lower()
                 score = 0
 
-                if ep_name == p_name_lower:
+                # Strict penalty if one is "strong" and the other is "premium/mild"
+                is_extracted_strong = "strong" in norm_extracted_name
+                is_ep_strong = "strong" in norm_ep_name
+                if is_extracted_strong != is_ep_strong and "london pilsner" in norm_extracted_name:
+                    continue  # Skip mismatching London Pilsner variant
+
+                if norm_ep_name == norm_extracted_name or ep_name == p_name_lower:
                     score += 100
                 elif brand and ep_brand and brand.lower() in ep_brand:
                     score += 40
@@ -222,7 +251,7 @@ def match_similar_products(extracted_items, shop_id):
                         score += 40
 
                 # Keyword overlap match
-                matching_words = [w for w in words if w in ep_name]
+                matching_words = [w for w in words if w in norm_ep_name or w in ep_name]
                 score += len(matching_words) * 15
 
                 if volume_tag and volume_tag in ep_name:
