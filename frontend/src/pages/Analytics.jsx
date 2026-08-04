@@ -71,6 +71,14 @@ export default function Analytics() {
         );
     }
 
+    const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
+
+    useEffect(() => {
+        const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+        window.addEventListener("resize", checkDesktop);
+        return () => window.removeEventListener("resize", checkDesktop);
+    }, []);
+
     const formattedProducts = topProducts
         .map(p => ({
             name: p.name,
@@ -80,11 +88,12 @@ export default function Analytics() {
 
     const totalVolume = formattedProducts.reduce((sum, p) => sum + p.total_quantity, 0);
 
+    const maxItems = isDesktop ? 7 : 5;
     let rawPieData = [];
-    if (formattedProducts.length > 5) {
-        const top5 = formattedProducts.slice(0, 5);
-        const othersQty = formattedProducts.slice(5).reduce((sum, p) => sum + p.total_quantity, 0);
-        rawPieData = [...top5, { name: "Others", total_quantity: othersQty }];
+    if (formattedProducts.length > maxItems) {
+        const topSlice = formattedProducts.slice(0, maxItems);
+        const othersQty = formattedProducts.slice(maxItems).reduce((sum, p) => sum + p.total_quantity, 0);
+        rawPieData = [...topSlice, { name: "Others", total_quantity: othersQty }];
     } else {
         rawPieData = formattedProducts;
     }
@@ -95,7 +104,7 @@ export default function Analytics() {
     }));
 
     const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-        if (percent < 0.04) return null;
+        if (percent < 0.03) return null;
         const RADIAN = Math.PI / 180;
         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -108,7 +117,7 @@ export default function Analytics() {
                 fill="#ffffff"
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize={10}
+                fontSize={isDesktop ? 12 : 10}
                 fontWeight="700"
             >
                 {`${(percent * 100).toFixed(0)}%`}
@@ -232,16 +241,16 @@ export default function Analytics() {
                             <CardTitle className="text-base font-bold">Top Products Volume Distribution</CardTitle>
                         </CardHeader>
                         <CardContent className="overflow-hidden">
-                            <ResponsiveContainer width="100%" height={320}>
+                            <ResponsiveContainer width="100%" height={isDesktop ? 380 : 300}>
                                 <PieChart>
                                     <Pie
                                         data={pieData}
                                         dataKey="total_quantity"
                                         nameKey="name"
                                         cx="50%"
-                                        cy="38%"
-                                        outerRadius={70}
-                                        innerRadius={30}
+                                        cy={isDesktop ? "42%" : "36%"}
+                                        outerRadius={isDesktop ? 100 : 65}
+                                        innerRadius={isDesktop ? 45 : 28}
                                         paddingAngle={3}
                                         label={renderPieLabel}
                                         labelLine={false}
@@ -259,16 +268,17 @@ export default function Analytics() {
                                     <Legend
                                         verticalAlign="bottom"
                                         align="center"
-                                        iconSize={10}
+                                        iconSize={isDesktop ? 12 : 10}
                                         layout="horizontal"
                                         wrapperStyle={{
-                                            fontSize: "11px",
-                                            maxHeight: "100px",
+                                            fontSize: isDesktop ? "12px" : "10px",
+                                            maxHeight: isDesktop ? "120px" : "90px",
                                             overflowY: "auto",
-                                            paddingTop: "6px"
+                                            paddingTop: "8px"
                                         }}
                                         formatter={(val, entry) => {
-                                            const truncated = val.length > 15 ? `${val.slice(0, 13)}...` : val;
+                                            const maxLen = isDesktop ? 22 : 13;
+                                            const truncated = val.length > maxLen ? `${val.slice(0, maxLen - 2)}...` : val;
                                             return `${truncated} (${entry.payload.percentage || 0}%)`;
                                         }}
                                     />
