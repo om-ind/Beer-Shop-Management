@@ -71,6 +71,14 @@ export default function Analytics() {
         );
     }
 
+    const pieData = topProducts.length > 5 ? [
+        ...topProducts.slice(0, 5),
+        {
+            name: "Others",
+            total_quantity: topProducts.slice(5).reduce((acc, p) => acc + (Number(p.total_quantity) || 0), 0)
+        }
+    ] : topProducts;
+
     return (
         <AdminLayout>
             <div className="space-y-6">
@@ -167,7 +175,7 @@ export default function Analytics() {
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={brandProfit}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
-                                <XAxis dataKey="brand" tick={{ fontSize: 11 }} stroke="#94A3B8" />
+                                <XAxis dataKey="brand" tick={{ fontSize: 10 }} stroke="#94A3B8" interval={0} angle={-20} textAnchor="end" height={50} />
                                 <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" />
                                 <Tooltip formatter={(v) => [`₹${Number(v).toLocaleString("en-IN")}`, "Profit"]} />
                                 <Bar dataKey="total_profit" radius={[6, 6, 0, 0]}>
@@ -182,27 +190,41 @@ export default function Analytics() {
 
                 {/* Restock & Pie Breakdown */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
+                    <Card className="overflow-hidden">
                         <CardHeader>
                             <CardTitle className="text-base font-bold">Top Products Volume Distribution</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={260}>
+                        <CardContent className="overflow-hidden">
+                            <ResponsiveContainer width="100%" height={320}>
                                 <PieChart>
                                     <Pie
-                                        data={topProducts}
+                                        data={pieData}
                                         dataKey="total_quantity"
                                         nameKey="name"
                                         cx="50%"
-                                        cy="50%"
-                                        outerRadius={90}
+                                        cy="38%"
+                                        outerRadius={65}
+                                        innerRadius={30}
+                                        paddingAngle={3}
                                     >
-                                        {topProducts.map((_, i) => (
+                                        {pieData.map((_, i) => (
                                             <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                                         ))}
                                     </Pie>
                                     <PieTooltip formatter={(v, n) => [`${v} units`, n]} />
-                                    <Legend />
+                                    <Legend
+                                        verticalAlign="bottom"
+                                        align="center"
+                                        iconSize={10}
+                                        layout="horizontal"
+                                        wrapperStyle={{
+                                            fontSize: "11px",
+                                            maxHeight: "100px",
+                                            overflowY: "auto",
+                                            paddingTop: "6px"
+                                        }}
+                                        formatter={(value) => (value.length > 22 ? `${value.slice(0, 20)}...` : value)}
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
                         </CardContent>
