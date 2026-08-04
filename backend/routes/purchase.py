@@ -92,10 +92,17 @@ def create_purchase():
     cursor = conn.cursor()
 
     try:
-        invoice_number = "PUR" + datetime.now().strftime("%Y%m%d%H%M%S")
+        raw_invoice = (data.get("invoice_no") or data.get("invoice_number") or "").strip()
+        invoice_number = raw_invoice if raw_invoice else "PUR" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+        raw_date = (data.get("purchase_date") or data.get("invoice_date") or "").strip()
+        purchase_date_val = raw_date if raw_date else datetime.now().strftime("%Y-%m-%d")
+
+        mvat_amount = float(data.get("mvat_amount") or 0.0)
+        tcs_amount = float(data.get("tcs_amount") or 0.0)
 
         items_subtotal = sum(
-            item["quantity"] * item["purchase_price"]
+            float(item["quantity"]) * float(item["purchase_price"])
             for item in data["items"]
         )
 
@@ -105,34 +112,74 @@ def create_purchase():
 
         grand_total = round(items_subtotal + transport_total, 2)
 
-        cursor.execute("""
-            INSERT INTO purchases
-            (supplier_id, invoice_number, purchase_date, total_amount, remarks, payment_mode, shop_id,
-             transport_per_carton, total_cartons, transport_total)
-            VALUES (%s,%s,CURDATE(),%s,%s,%s,%s,%s,%s,%s)
-        """, (
-            data["supplier_id"],
-            invoice_number,
-            grand_total,
-            data.get("remarks", ""),
-            data["payment_mode"],
-            shop_id,
-            transport_per_carton,
-            total_cartons,
-            transport_total
-        ))
+        # Handle purchase table insert (supporting mvat_amount, tcs_amount)
+        try:
+            cursor.execute("""
+                INSERT INTO purchases
+                (supplier_id, invoice_number, invoice_no, purchase_date, total_amount, total, remarks, payment_mode, shop_id,
+                 transport_per_carton, total_cartons, transport_total, mvat_amount, tcs_amount)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                data["supplier_id"],
+                invoice_number,
+                invoice_number,
+                purchase_date_val,
+                grand_total,
+                grand_total,
+                data.get("remarks", ""),
+                data["payment_mode"],
+                shop_id,
+                transport_per_carton,
+                total_cartons,
+                transport_total,
+                mvat_amount,
+                tcs_amount
+            ))
+        except Exception:
+            cursor.execute("""
+                INSERT INTO purchases
+                (supplier_id, invoice_no, purchase_date, total, shop_id)
+                VALUES (%s,%s,%s,%s,%s)
+            """, (
+                data["supplier_id"],
+                invoice_number,
+                purchase_date_val,
+                grand_total,
+                shop_id
+            ))
 
         purchase_id = cursor.lastrowid
 
         for item in data["items"]:
+            product_id = item.get("id")
+            # If user explicitly chose "Create as New Product" or product id missing
+            if not product_id or item.get("is_new"):
+                name = item.get("name") or item.get("extracted_name") or "New Product"
+                brand = item.get("brand") or ""
+                category = item.get("category") or "Beer"
+                p_price = float(item.get("purchase_price") or 0.0)
+                s_price = float(item.get("selling_price") or (p_price * 1.3))
+
+                cursor.execute(
+                    """
+                    INSERT INTO products (name, brand, category, purchase_price, selling_price, stock, minimum_stock, shop_id)
+                    VALUES (%s, %s, %s, %s, %s, 0, 10, %s)
+                    """,
+                    (name, brand, category, p_price, s_price, shop_id)
+                )
+                product_id = cursor.lastrowid
+
+            qty = int(round(float(item.get("quantity") or 1)))
+            p_price = float(item.get("purchase_price") or 0.0)
+
             cursor.execute("""
                 INSERT INTO purchase_items (purchase_id, product_id, quantity, purchase_price)
                 VALUES (%s,%s,%s,%s)
-            """, (purchase_id, item["id"], item["quantity"], item["purchase_price"]))
+            """, (purchase_id, product_id, qty, p_price))
 
             cursor.execute(
                 "UPDATE products SET stock = stock + %s WHERE id = %s",
-                (item["quantity"], item["id"])
+                (qty, product_id)
             )
 
         # Auto-create supplier bill
@@ -143,31 +190,42 @@ def create_purchase():
             paid_amt = grand_total
             bill_status = "paid"
 
-        cursor.execute("""
-            INSERT INTO supplier_bills
-            (supplier_id, bill_number, bill_date, due_date, total_amount, paid_amount, status, notes, shop_id)
-            VALUES (%s, %s, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), %s, %s, %s, %s, %s)
-        """, (
-            data["supplier_id"],
-            invoice_number,
-            grand_total,
-            paid_amt,
-            bill_status,
-            f"Auto-generated from Purchase {invoice_number}. Includes ₹{transport_total:.2f} transport ({total_cartons} cartons @ ₹{transport_per_carton:.2f}/carton). Remarks: {data.get('remarks', '')}".strip(),
-            shop_id
-        ))
+        notes_txt = f"Purchase {invoice_number}. MVAT: ₹{mvat_amount:.2f}, TCS: ₹{tcs_amount:.2f}. Transport: ₹{transport_total:.2f}. Remarks: {data.get('remarks', '')}".strip()
+
+        try:
+            cursor.execute("""
+                INSERT INTO supplier_bills
+                (supplier_id, bill_number, bill_date, due_date, total_amount, paid_amount, status, notes, shop_id)
+                VALUES (%s, %s, %s, DATE_ADD(%s, INTERVAL 30 DAY), %s, %s, %s, %s, %s)
+            """, (
+                data["supplier_id"],
+                invoice_number,
+                purchase_date_val,
+                purchase_date_val,
+                grand_total,
+                paid_amt,
+                bill_status,
+                notes_txt,
+                shop_id
+            ))
+        except Exception:
+            pass
 
         # Auto-create transport expense entry if transport charge > 0
         if transport_total > 0:
-            cursor.execute("""
-                INSERT INTO expenses (category, amount, expense_date, description, shop_id)
-                VALUES (%s, %s, CURDATE(), %s, %s)
-            """, (
-                "Transport",
-                transport_total,
-                f"Transport charge for Purchase {invoice_number} ({total_cartons} cartons @ ₹{transport_per_carton:.2f}/carton)",
-                shop_id
-            ))
+            try:
+                cursor.execute("""
+                    INSERT INTO expenses (category, amount, expense_date, description, shop_id)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    "Transport",
+                    transport_total,
+                    purchase_date_val,
+                    f"Transport charge for Purchase {invoice_number} ({total_cartons} cartons @ ₹{transport_per_carton:.2f}/carton)",
+                    shop_id
+                ))
+            except Exception:
+                pass
 
         conn.commit()
 

@@ -101,6 +101,8 @@ CREATE TABLE IF NOT EXISTS purchases (
     invoice_no  VARCHAR(50),
     purchase_date DATE,
     total       DECIMAL(10,2) NOT NULL,
+    mvat_amount DECIMAL(10,2) DEFAULT 0.00,
+    tcs_amount  DECIMAL(10,2) DEFAULT 0.00,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
     FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 );

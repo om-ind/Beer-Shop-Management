@@ -77,6 +77,7 @@ def setup_all():
             os.path.join(base_dir, 'migration_expenses.sql'),
             os.path.join(base_dir, 'migration_cash_register_supplier_bills.sql'),
             os.path.join(base_dir, 'migration_multi_shop.sql'),
+            os.path.join(base_dir, 'migration_mvat_tcs.sql'),
             os.path.join(base_dir, 'sample_data.sql')
         ]
 

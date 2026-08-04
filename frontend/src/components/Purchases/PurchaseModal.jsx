@@ -21,6 +21,11 @@ export default function PurchaseModal({ onClose, onSave }) {
         supplier_id: "",
         payment_mode: "Cash",
         remarks: "",
+        invoice_no: "",
+        purchase_date: new Date().toISOString().split("T")[0],
+        mvat_amount: "",
+        tcs_amount: "",
+        bill_total_amount: "",
     });
 
     // Transport charges per carton (default ₹25 per carton)
@@ -149,22 +154,32 @@ export default function PurchaseModal({ onClose, onSave }) {
         setScanError("");
         setScanSuccess(true);
 
-        // Try to match supplier
+        let matchedSupplierId = purchase.supplier_id;
         if (extracted.supplier_name) {
             const match = suppliers.find(s =>
                 s.name.toLowerCase().includes(extracted.supplier_name.toLowerCase()) ||
                 extracted.supplier_name.toLowerCase().includes(s.name.toLowerCase())
             );
             if (match) {
-                setPurchase(prev => ({ ...prev, supplier_id: match.id }));
+                matchedSupplierId = match.id;
             }
         }
 
-        // Set extracted items with base_price
+        setPurchase(prev => ({
+            ...prev,
+            supplier_id: matchedSupplierId,
+            invoice_no: extracted.bill_number || prev.invoice_no,
+            purchase_date: extracted.bill_date || prev.purchase_date,
+            mvat_amount: extracted.mvat_amount !== undefined ? extracted.mvat_amount : prev.mvat_amount,
+            tcs_amount: extracted.tcs_amount !== undefined ? extracted.tcs_amount : prev.tcs_amount,
+            bill_total_amount: extracted.total_amount !== undefined ? extracted.total_amount : prev.bill_total_amount,
+        }));
+
         if (extracted.items && extracted.items.length > 0) {
             setItems(extracted.items.map(item => ({
-                id: item.id,
+                id: item.id || null,
                 name: item.name,
+                extracted_name: item.extracted_name || item.name,
                 brand: item.brand || "",
                 category: item.category || "Beer",
                 quantity: item.quantity || 1,
@@ -172,11 +187,11 @@ export default function PurchaseModal({ onClose, onSave }) {
                 purchase_price: item.purchase_price || 0,
                 selling_price: item.selling_price || 0,
                 stock: item.stock || 0,
-                is_new: item.is_new || false,
+                is_new: item.is_new !== undefined ? item.is_new : !item.id,
+                similar_products: item.similar_products || [],
             })));
         }
 
-        // Switch to manual tab to show the review form
         setActiveTab("manual");
     }
 
@@ -228,8 +243,8 @@ export default function PurchaseModal({ onClose, onSave }) {
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                 <p className="text-blue-700 text-sm">
                                     <strong>How it works:</strong> Upload a photo or PDF of your supplier bill.
-                                    AI will extract product names, quantities, and prices automatically.
-                                    You can review and edit everything before saving.
+                                    AI will extract MVAT, TCS, Invoice No, Date, supplier total amount, and line items.
+                                    You can match existing inventory or create new products before saving.
                                 </p>
                             </div>
 
@@ -262,42 +277,124 @@ export default function PurchaseModal({ onClose, onSave }) {
                                             {items.length} products found
                                             {newProductCount > 0 && (
                                                 <span className="ml-1">
-                                                    · <strong>{newProductCount} new</strong> products auto-created
+                                                    · <strong>{newProductCount} new</strong> product option(s) selected
                                                 </span>
                                             )}
-                                            . Review and edit below before saving.
+                                            . Match existing stock or create new products below.
                                         </p>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Supplier & Payment */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <select
-                                    name="supplier_id"
-                                    value={purchase.supplier_id}
-                                    onChange={handleChange}
-                                    className="border border-slate-300 rounded-xl p-3 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-                                >
-                                    <option value="" className="bg-white text-slate-900 font-medium">Select Supplier</option>
-                                    {suppliers.map((supplier) => (
-                                        <option key={supplier.id} value={supplier.id} className="bg-white text-slate-900 font-medium">
-                                            {supplier.name}
-                                        </option>
-                                    ))}
-                                </select>
+                            {/* Supplier & Bill Header Details Section */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-800 text-sm">Supplier & Bill Information</h3>
+                                    {purchase.bill_total_amount > 0 && (
+                                        <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">
+                                            Scanned Total: ₹{Number(purchase.bill_total_amount).toLocaleString("en-IN")}
+                                        </span>
+                                    )}
+                                </div>
 
-                                <select
-                                    name="payment_mode"
-                                    value={purchase.payment_mode}
-                                    onChange={handleChange}
-                                    className="border border-slate-300 rounded-xl p-3 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-                                >
-                                    <option className="bg-white text-slate-900 font-medium">Cash</option>
-                                    <option className="bg-white text-slate-900 font-medium">Card</option>
-                                    <option className="bg-white text-slate-900 font-medium">UPI</option>
-                                    <option className="bg-white text-slate-900 font-medium">Credit</option>
-                                </select>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Supplier</label>
+                                        <select
+                                            name="supplier_id"
+                                            value={purchase.supplier_id}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        >
+                                            <option value="">Select Supplier</option>
+                                            {suppliers.map((supplier) => (
+                                                <option key={supplier.id} value={supplier.id}>
+                                                    {supplier.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Payment Mode</label>
+                                        <select
+                                            name="payment_mode"
+                                            value={purchase.payment_mode}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        >
+                                            <option>Cash</option>
+                                            <option>Card</option>
+                                            <option>UPI</option>
+                                            <option>Credit</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Invoice No</label>
+                                        <input
+                                            type="text"
+                                            name="invoice_no"
+                                            placeholder="e.g. INV-10045"
+                                            value={purchase.invoice_no}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Invoice Date</label>
+                                        <input
+                                            type="date"
+                                            name="purchase_date"
+                                            value={purchase.purchase_date}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Taxes breakdown */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">MVAT Amount (₹)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            name="mvat_amount"
+                                            placeholder="0.00"
+                                            value={purchase.mvat_amount}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">TCS Amount (₹)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            name="tcs_amount"
+                                            placeholder="0.00"
+                                            value={purchase.tcs_amount}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 mb-1">Scanned Total Bill (₹)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            name="bill_total_amount"
+                                            placeholder="0.00"
+                                            value={purchase.bill_total_amount}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-300 rounded-xl p-2 bg-white text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <textarea
@@ -387,8 +484,8 @@ export default function PurchaseModal({ onClose, onSave }) {
                             <div className="relative">
                                 <PurchaseItems
                                     items={effectiveItems}
+                                    allProducts={products}
                                     setItems={(updated) => {
-                                        // Update base_price when user manually edits purchase_price in table
                                         setItems(updated.map(item => ({
                                             ...item,
                                             base_price: item.purchase_price - (item.transport_per_unit || 0)

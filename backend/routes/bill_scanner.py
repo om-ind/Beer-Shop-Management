@@ -20,7 +20,7 @@ def allowed_file(filename):
 
 
 EXTRACTION_PROMPT = """You are a bill/invoice data extraction assistant for an Indian beer and liquor shop.
-Analyze this purchase bill image/document and extract all line items (products) into JSON.
+Analyze this purchase bill image/document and extract all invoice details and line items (products) into JSON.
 
 CRITICAL INSTRUCTIONS:
 1. Read the EXACT volume for each item carefully (e.g. 650ml, 500ml, 330ml, 750ml, 180ml). Do NOT confuse 650ml with 500ml.
@@ -29,12 +29,22 @@ CRITICAL INSTRUCTIONS:
    - Extract the number of cases/cartons listed on the bill into "carton_qty".
    - Extract the unit type (Case/Carton or Bottle/Can) into "unit_type".
    - Extract unit_price (price per case or price per unit as listed on bill) and total_price.
+4. Extract tax & header breakdown:
+   - Extract supplier / vendor business name into "supplier_name".
+   - Extract bill / invoice number into "bill_number".
+   - Extract bill / invoice date into "bill_date" (in YYYY-MM-DD or readable date string).
+   - Extract MVAT (Maharashtra Value Added Tax or VAT amount) into "mvat_amount" (numeric or 0.00).
+   - Extract TCS (Tax Collected at Source) into "tcs_amount" (numeric or 0.00).
+   - Extract the ENTIRE total bill amount (including all taxes & charges) into "total_amount".
 
 Return this exact JSON structure:
 {
   "supplier_name": "supplier/vendor name from the bill or null",
   "bill_number": "invoice/bill number or null",
   "bill_date": "YYYY-MM-DD format or null",
+  "mvat_amount": 0.00,
+  "tcs_amount": 0.00,
+  "total_amount": 0.00,
   "items": [
     {
       "product_name": "full product name with volume (e.g. KINGFISHER CAN 500ml)",
@@ -46,8 +56,7 @@ Return this exact JSON structure:
       "unit_price": 0.00,
       "total_price": 0.00
     }
-  ],
-  "total_amount": 0.00
+  ]
 }"""
 
 
@@ -120,16 +129,27 @@ def extract_with_gemini(filepath):
     raise last_error or Exception("All models failed")
 
 
-def match_or_create_products(extracted_items, shop_id):
+def match_similar_products(extracted_items, shop_id):
     """
-    For each extracted item, convert carton quantity to bottle/can count (500ml -> x24, 650ml -> x12),
-    then try to match existing product by exact volume. Auto-create if not found.
+    Find existing candidate products from stock for each extracted line item.
+    Do NOT directly auto-create products in the database during scanning.
     """
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     matched_items = []
 
     try:
+        # Fetch all existing products in remaining stock for this shop
+        cursor.execute(
+            """
+            SELECT id, name, brand, category, purchase_price, selling_price, stock
+            FROM products
+            WHERE shop_id = %s
+            """,
+            (shop_id,)
+        )
+        existing_products = cursor.fetchall()
+
         for item in extracted_items:
             product_name = (item.get("product_name") or "").strip()
             if not product_name:
@@ -140,22 +160,22 @@ def match_or_create_products(extracted_items, shop_id):
             vol_str = (item.get("volume") or "").lower()
             p_name_lower = product_name.lower()
 
-            # Determine multiplier (500ml/330ml -> 24 per carton, 650ml/750ml -> 12 per carton)
+            # Determine volume multiplier
             if "650" in vol_str or "650" in p_name_lower:
                 multiplier = 12
-                volume_tag = "650ml"
+                volume_tag = "650"
             elif "500" in vol_str or "500" in p_name_lower:
                 multiplier = 24
-                volume_tag = "500ml"
+                volume_tag = "500"
             elif "330" in vol_str or "330" in p_name_lower:
                 multiplier = 24
-                volume_tag = "330ml"
+                volume_tag = "330"
             elif "750" in vol_str or "750" in p_name_lower:
                 multiplier = 12
-                volume_tag = "750ml"
+                volume_tag = "750"
             elif "180" in vol_str or "180" in p_name_lower:
                 multiplier = 48
-                volume_tag = "180ml"
+                volume_tag = "180"
             else:
                 multiplier = 12
                 volume_tag = ""
@@ -163,12 +183,11 @@ def match_or_create_products(extracted_items, shop_id):
             carton_qty = float(item.get("carton_qty") or item.get("quantity") or 1)
             unit_type = (item.get("unit_type") or "Case").strip().lower()
 
-            # Calculate total bottle/can quantity
+            # Calculate total unit quantity
             if "bottle" not in unit_type and "can" not in unit_type and "unit" not in unit_type:
                 total_qty = int(round(carton_qty * multiplier))
             else:
                 total_qty = int(round(carton_qty))
-
             total_qty = max(total_qty, 1)
 
             # Calculate per-unit purchase price
@@ -184,67 +203,70 @@ def match_or_create_products(extracted_items, shop_id):
             else:
                 per_unit_price = 0.0
 
-            # Step 1: Try exact product name match
-            cursor.execute(
-                """
-                SELECT id, name, brand, category, purchase_price, selling_price, stock
-                FROM products
-                WHERE shop_id = %s AND LOWER(name) = LOWER(%s)
-                LIMIT 1
-                """,
-                (shop_id, product_name)
-            )
-            existing = cursor.fetchone()
+            selling_price = round(per_unit_price * 1.3, 2) if per_unit_price > 0 else 0.0
 
-            # Step 2: Try match by brand + volume tag if available
-            if not existing and volume_tag and brand:
-                cursor.execute(
-                    """
-                    SELECT id, name, brand, category, purchase_price, selling_price, stock
-                    FROM products
-                    WHERE shop_id = %s AND LOWER(name) LIKE %s AND LOWER(name) LIKE %s
-                    LIMIT 1
-                    """,
-                    (shop_id, f"%{brand.lower()}%", f"%{volume_tag.lower()}%")
-                )
-                existing = cursor.fetchone()
+            # Rank candidate products from existing inventory
+            scored_candidates = []
+            words = [w for w in p_name_lower.replace("-", " ").split() if len(w) > 2]
 
-            if existing:
-                matched_items.append({
-                    "id": existing["id"],
-                    "name": existing["name"],
-                    "brand": existing["brand"] or brand,
-                    "category": existing["category"] or category,
-                    "quantity": total_qty,
-                    "purchase_price": per_unit_price if per_unit_price > 0 else float(existing["purchase_price"]),
-                    "selling_price": float(existing["selling_price"]),
-                    "stock": existing["stock"],
-                    "is_new": False,
-                })
-            else:
-                # Auto-create new product with exact volume in name
-                selling_price = round(per_unit_price * 1.3, 2) if per_unit_price > 0 else 0
-                cursor.execute(
-                    """
-                    INSERT INTO products (name, brand, category, purchase_price, selling_price, stock, minimum_stock, shop_id)
-                    VALUES (%s, %s, %s, %s, %s, 0, 10, %s)
-                    """,
-                    (product_name, brand, category, per_unit_price, selling_price, shop_id)
-                )
-                conn.commit()
-                new_id = cursor.lastrowid
+            for ep in existing_products:
+                ep_name = (ep["name"] or "").lower()
+                ep_brand = (ep["brand"] or "").lower()
+                score = 0
 
-                matched_items.append({
-                    "id": new_id,
-                    "name": product_name,
-                    "brand": brand,
-                    "category": category,
-                    "quantity": total_qty,
-                    "purchase_price": per_unit_price,
-                    "selling_price": selling_price,
-                    "stock": 0,
-                    "is_new": True,
-                })
+                if ep_name == p_name_lower:
+                    score += 100
+                elif brand and ep_brand and brand.lower() in ep_brand:
+                    score += 40
+                    if volume_tag and volume_tag in ep_name:
+                        score += 40
+
+                # Keyword overlap match
+                matching_words = [w for w in words if w in ep_name]
+                score += len(matching_words) * 15
+
+                if volume_tag and volume_tag in ep_name:
+                    score += 15
+
+                if score > 0:
+                    scored_candidates.append({
+                        "score": score,
+                        "id": ep["id"],
+                        "name": ep["name"],
+                        "brand": ep["brand"] or "",
+                        "category": ep["category"] or "Beer",
+                        "purchase_price": float(ep["purchase_price"] or 0),
+                        "selling_price": float(ep["selling_price"] or 0),
+                        "stock": ep["stock"]
+                    })
+
+            # Sort by score descending
+            scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+            top_similar = [{
+                "id": c["id"],
+                "name": c["name"],
+                "brand": c["brand"],
+                "category": c["category"],
+                "purchase_price": c["purchase_price"],
+                "selling_price": c["selling_price"],
+                "stock": c["stock"]
+            } for c in scored_candidates[:5]]
+
+            best_match = top_similar[0] if top_similar and scored_candidates[0]["score"] >= 40 else None
+
+            matched_items.append({
+                "id": best_match["id"] if best_match else None,
+                "name": best_match["name"] if best_match else product_name,
+                "extracted_name": product_name,
+                "brand": brand,
+                "category": category,
+                "quantity": total_qty,
+                "purchase_price": per_unit_price if per_unit_price > 0 else (best_match["purchase_price"] if best_match else 0.0),
+                "selling_price": best_match["selling_price"] if best_match else selling_price,
+                "stock": best_match["stock"] if best_match else 0,
+                "is_new": True if not best_match else False,
+                "similar_products": top_similar
+            })
 
         return matched_items
 
@@ -289,8 +311,8 @@ def scan_bill():
         # Get shop_id from authenticated user
         shop_id = g.user.get("shop_id") or 1
 
-        # Match/create products in database
-        matched_items = match_or_create_products(
+        # Match similar products from existing stock (does NOT create DB rows)
+        matched_items = match_similar_products(
             extracted.get("items", []),
             shop_id
         )
@@ -299,9 +321,11 @@ def scan_bill():
             "success": True,
             "extracted": {
                 "supplier_name": extracted.get("supplier_name"),
-                "bill_number": extracted.get("bill_number"),
-                "bill_date": extracted.get("bill_date"),
-                "total_amount": extracted.get("total_amount"),
+                "bill_number": extracted.get("bill_number") or extracted.get("invoice_no"),
+                "bill_date": extracted.get("bill_date") or extracted.get("invoice_date"),
+                "mvat_amount": float(extracted.get("mvat_amount") or 0.0),
+                "tcs_amount": float(extracted.get("tcs_amount") or 0.0),
+                "total_amount": float(extracted.get("total_amount") or 0.0),
                 "items": matched_items,
             }
         })
