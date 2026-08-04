@@ -148,7 +148,8 @@ export default function Sales() {
             setProducts([]);
             toast.success(`Sale complete! Invoice: ${result.invoice_no}`);
         } catch (err) {
-            toast.error(err.response?.data?.error || "Sale failed");
+            const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Sale failed";
+            toast.error(errorMsg);
         } finally {
             setProcessing(false);
         }

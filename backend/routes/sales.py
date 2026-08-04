@@ -149,20 +149,18 @@ def get_sale_detail(sale_id):
 @sales_bp.route("/sales", methods=["POST"])
 @token_required
 def create_sale():
-    data = request.get_json()
-    shop_id = _shop_id()
+    data = request.get_json() or {}
+    shop_id = _shop_id() or data.get("shop_id")
 
-    if _is_admin():
-        shop_id = data.get("shop_id") or shop_id
-        if not shop_id:
-            return jsonify({"error": "shop_id is required"}), 400
+    if not shop_id:
+        shop_id = 1
 
     customer_id = data.get("customer_id")
-    payment_mode = data.get("payment_mode")
+    payment_mode = data.get("payment_mode", "Cash")
     items = data.get("items", [])
 
-    if len(items) == 0:
-        return jsonify({"error": "No items selected"}), 400
+    if not items or len(items) == 0:
+        return jsonify({"error": "No items selected in cart"}), 400
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -171,7 +169,7 @@ def create_sale():
         # Resolve walk-in customer if no customer_id provided
         if not customer_id:
             cursor.execute(
-                "SELECT id FROM customers WHERE shop_id=%s AND name='Walk-in Customer' LIMIT 1",
+                "SELECT id FROM customers WHERE (shop_id=%s OR shop_id IS NULL) AND name='Walk-in Customer' LIMIT 1",
                 (shop_id,)
             )
             walkin = cursor.fetchone()
@@ -185,38 +183,57 @@ def create_sale():
                 customer_id = cursor.lastrowid
         else:
             cursor.execute(
-                "SELECT id FROM customers WHERE id=%s AND shop_id=%s",
-                (customer_id, shop_id)
+                "SELECT id FROM customers WHERE id=%s",
+                (customer_id,)
             )
             if not cursor.fetchone():
                 return jsonify({"error": f"Customer ID {customer_id} not found"}), 400
 
-        total = 0
-        product_cache = {}  # product_id -> product row, avoids double query
+        total = 0.0
+        product_cache = {}
 
         for item in items:
+            p_id = item.get("product_id")
+            qty = int(item.get("quantity", 0))
+
+            if qty <= 0:
+                return jsonify({"error": "Invalid item quantity"}), 400
+
             cursor.execute(
-                "SELECT id, name, stock, selling_price, purchase_price FROM products WHERE id=%s AND shop_id=%s",
-                (item["product_id"], shop_id)
+                "SELECT id, name, stock, selling_price, purchase_price FROM products WHERE id=%s",
+                (p_id,)
             )
             product = cursor.fetchone()
 
             if product is None:
-                return jsonify({"error": f"Product {item['product_id']} not found"}), 400
+                return jsonify({"error": f"Product #{p_id} not found"}), 400
 
-            if product["stock"] < item["quantity"]:
-                return jsonify({"error": f"Insufficient stock for {product['name']}"}), 400
+            curr_stock = int(product.get("stock") or 0)
+            if curr_stock < qty:
+                return jsonify({
+                    "error": f"Insufficient stock for {product['name']}. Available: {curr_stock}, Requested: {qty}"
+                }), 400
 
             try:
-                item_price = float(item.get("selling_price"))
+                item_price = float(item.get("selling_price", product["selling_price"]))
             except (ValueError, TypeError):
-                item_price = float(product["selling_price"])
+                item_price = float(product["selling_price"] or 0)
 
-            total += item_price * item["quantity"]
-            product_cache[item["product_id"]] = (product, item_price)
+            total += item_price * qty
+            product_cache[p_id] = (product, item_price, qty)
 
         invoice_no = "INV" + datetime.now().strftime("%Y%m%d%H%M%S")
-        sale_date = data.get("sale_date") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        raw_sale_date = data.get("sale_date")
+        if raw_sale_date:
+            try:
+                if len(raw_sale_date) == 10:
+                    sale_date = f"{raw_sale_date} {datetime.now().strftime('%H:%M:%S')}"
+                else:
+                    sale_date = raw_sale_date
+            except Exception:
+                sale_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            sale_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute(
             """
@@ -230,8 +247,10 @@ def create_sale():
         sale_id = cursor.lastrowid
 
         for item in items:
-            product, item_price = product_cache[item["product_id"]]
-            profit = (item_price - float(product["purchase_price"])) * item["quantity"]
+            p_id = item["product_id"]
+            product, item_price, qty = product_cache[p_id]
+            purchase_price = float(product.get("purchase_price") or 0)
+            profit = (item_price - purchase_price) * qty
 
             cursor.execute(
                 """
@@ -239,12 +258,12 @@ def create_sale():
                 (sale_id, product_id, quantity, price, profit)
                 VALUES(%s,%s,%s,%s,%s)
                 """,
-                (sale_id, item["product_id"], item["quantity"], item_price, profit)
+                (sale_id, p_id, qty, item_price, profit)
             )
 
             cursor.execute(
                 "UPDATE products SET stock = stock - %s WHERE id=%s",
-                (item["quantity"], item["product_id"])
+                (qty, p_id)
             )
 
         if payment_mode == "Credit":
@@ -260,7 +279,7 @@ def create_sale():
                 (customer_id, -float(total), f"Credit sale — Invoice {invoice_no}")
             )
 
-        conn.commit()  # single commit covers sale + items + stock + credit
+        conn.commit()
 
         return jsonify({
             "success": True,
