@@ -29,6 +29,13 @@ export default function Analytics() {
     const [bestBrand, setBestBrand] = useState(null);
     const [worstBrand, setWorstBrand] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
+
+    useEffect(() => {
+        const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+        window.addEventListener("resize", checkDesktop);
+        return () => window.removeEventListener("resize", checkDesktop);
+    }, []);
 
     useEffect(() => {
         loadAll();
@@ -70,14 +77,6 @@ export default function Analytics() {
             </AdminLayout>
         );
     }
-
-    const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
-
-    useEffect(() => {
-        const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
-        window.addEventListener("resize", checkDesktop);
-        return () => window.removeEventListener("resize", checkDesktop);
-    }, []);
 
     const formattedProducts = topProducts
         .map(p => ({
