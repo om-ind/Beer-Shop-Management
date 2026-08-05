@@ -25,6 +25,7 @@ export default function PurchaseModal({ onClose, onSave }) {
         purchase_date: new Date().toISOString().split("T")[0],
         mvat_amount: "",
         tcs_amount: "",
+        trade_discount: "",
         bill_total_amount: "",
     });
 
@@ -129,7 +130,14 @@ export default function PurchaseModal({ onClose, onSave }) {
     }, 0);
 
     const totalTransportCost = totalCartons * Number(transportPerCarton || 0);
-    const grandTotal = effectiveItems.reduce((sum, item) => sum + item.quantity * item.purchase_price, 0);
+    const itemsSubtotal = effectiveItems.reduce((sum, item) => sum + item.quantity * item.purchase_price, 0);
+    const tradeDiscountAmount = Number(purchase.trade_discount || 0);
+    const netCalculatedTotal = Math.max(0, itemsSubtotal - tradeDiscountAmount);
+
+    // Keep final billing amount as the scanned bill total amount if present (>0), otherwise net calculated total
+    const grandTotal = (Number(purchase.bill_total_amount) > 0)
+        ? Number(purchase.bill_total_amount)
+        : netCalculatedTotal;
 
     function handleSavePurchase() {
         if (!purchase.supplier_id) {
@@ -146,6 +154,9 @@ export default function PurchaseModal({ onClose, onSave }) {
             transport_per_carton: Number(transportPerCarton || 0),
             total_cartons: totalCartons,
             transport_total: totalTransportCost,
+            trade_discount: tradeDiscountAmount,
+            bill_total_amount: grandTotal,
+            total_amount: grandTotal,
         });
     }
 
@@ -172,6 +183,7 @@ export default function PurchaseModal({ onClose, onSave }) {
             purchase_date: extracted.bill_date || prev.purchase_date,
             mvat_amount: extracted.mvat_amount !== undefined ? extracted.mvat_amount : prev.mvat_amount,
             tcs_amount: extracted.tcs_amount !== undefined ? extracted.tcs_amount : prev.tcs_amount,
+            trade_discount: extracted.trade_discount !== undefined ? extracted.trade_discount : prev.trade_discount,
             bill_total_amount: extracted.total_amount !== undefined ? extracted.total_amount : prev.bill_total_amount,
         }));
 
@@ -354,8 +366,8 @@ export default function PurchaseModal({ onClose, onSave }) {
                                     </div>
                                 </div>
 
-                                {/* Taxes breakdown */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                                {/* Taxes & Discounts breakdown */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-400 mb-1">MVAT Amount (₹)</label>
                                         <input
@@ -377,6 +389,19 @@ export default function PurchaseModal({ onClose, onSave }) {
                                             name="tcs_amount"
                                             placeholder="0.00"
                                             value={purchase.tcs_amount}
+                                            onChange={handleChange}
+                                            className="w-full border border-slate-800 rounded-xl p-2 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1">Trade Discount (₹)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            name="trade_discount"
+                                            placeholder="0.00"
+                                            value={purchase.trade_discount}
                                             onChange={handleChange}
                                             className="w-full border border-slate-800 rounded-xl p-2 bg-slate-900 text-slate-100 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
                                         />
@@ -508,11 +533,19 @@ export default function PurchaseModal({ onClose, onSave }) {
                             <div className="flex justify-between items-center pt-4 border-t border-slate-800">
                                 <div>
                                     <div className="text-xs text-slate-400">
-                                        Includes ₹{totalTransportCost.toFixed(2)} transport ({totalCartons.toFixed(1)} cartons @ ₹{transportPerCarton}/carton) automatically added to unit prices
+                                        Includes ₹{totalTransportCost.toFixed(2)} transport ({totalCartons.toFixed(1)} cartons @ ₹{transportPerCarton}/carton)
+                                        {tradeDiscountAmount > 0 && ` · Trade Discount: -₹${tradeDiscountAmount.toFixed(2)}`}
                                     </div>
-                                    <h2 className="text-2xl font-bold text-white">
-                                        Total Amount ₹{grandTotal.toFixed(2)}
-                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-2xl font-bold text-white">
+                                            Total Amount ₹{grandTotal.toFixed(2)}
+                                        </h2>
+                                        {Number(purchase.bill_total_amount) > 0 && (
+                                            <span className="text-[11px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                                                Scanned Bill Total
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-3">

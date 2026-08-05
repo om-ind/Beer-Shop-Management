@@ -103,6 +103,8 @@ CREATE TABLE IF NOT EXISTS purchases (
     total       DECIMAL(10,2) NOT NULL,
     mvat_amount DECIMAL(10,2) DEFAULT 0.00,
     tcs_amount  DECIMAL(10,2) DEFAULT 0.00,
+    trade_discount DECIMAL(10,2) DEFAULT 0.00,
+    bill_total_amount DECIMAL(10,2) DEFAULT 0.00,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
     FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 );

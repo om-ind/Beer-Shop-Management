@@ -39,7 +39,8 @@ CRITICAL INSTRUCTIONS:
    - Extract bill / invoice date into "bill_date" (in YYYY-MM-DD or readable date string).
    - Extract MVAT (Maharashtra Value Added Tax or VAT amount) into "mvat_amount" (numeric or 0.00).
    - Extract TCS (Tax Collected at Source) into "tcs_amount" (numeric or 0.00).
-   - Extract the ENTIRE total bill amount (including all taxes & charges) into "total_amount".
+   - Extract Trade Discount (T.D. / TD / scheme discount / special discount) into "trade_discount" (numeric or 0.00).
+   - Extract the ENTIRE total bill amount (including all taxes & charges, minus discounts) into "total_amount".
 
 Return this exact JSON structure:
 {
@@ -48,6 +49,7 @@ Return this exact JSON structure:
   "bill_date": "YYYY-MM-DD format or null",
   "mvat_amount": 0.00,
   "tcs_amount": 0.00,
+  "trade_discount": 0.00,
   "total_amount": 0.00,
   "items": [
     {
@@ -372,6 +374,7 @@ def scan_bill():
                 "bill_date": extracted.get("bill_date") or extracted.get("invoice_date"),
                 "mvat_amount": float(extracted.get("mvat_amount") or 0.0),
                 "tcs_amount": float(extracted.get("tcs_amount") or 0.0),
+                "trade_discount": float(extracted.get("trade_discount") or extracted.get("trade_discount_amount") or 0.0),
                 "total_amount": float(extracted.get("total_amount") or 0.0),
                 "items": matched_items,
             }

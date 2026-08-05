@@ -100,6 +100,8 @@ def create_purchase():
 
         mvat_amount = float(data.get("mvat_amount") or 0.0)
         tcs_amount = float(data.get("tcs_amount") or 0.0)
+        trade_discount = float(data.get("trade_discount") or 0.0)
+        bill_total_amount = float(data.get("bill_total_amount") or 0.0)
 
         items_subtotal = sum(
             float(item["quantity"]) * float(item["purchase_price"])
@@ -110,15 +112,19 @@ def create_purchase():
         total_cartons = float(data.get("total_cartons", 0))
         transport_total = float(data.get("transport_total", total_cartons * transport_per_carton))
 
-        grand_total = round(items_subtotal + transport_total, 2)
+        # Use scanned/entered bill_total_amount as final billing amount if provided (> 0)
+        if bill_total_amount > 0:
+            grand_total = round(bill_total_amount, 2)
+        else:
+            grand_total = round(items_subtotal + transport_total - trade_discount, 2)
 
-        # Handle purchase table insert (supporting mvat_amount, tcs_amount)
+        # Handle purchase table insert (supporting mvat_amount, tcs_amount, trade_discount, bill_total_amount)
         try:
             cursor.execute("""
                 INSERT INTO purchases
                 (supplier_id, invoice_number, invoice_no, purchase_date, total_amount, total, remarks, payment_mode, shop_id,
-                 transport_per_carton, total_cartons, transport_total, mvat_amount, tcs_amount)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                 transport_per_carton, total_cartons, transport_total, mvat_amount, tcs_amount, trade_discount, bill_total_amount)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
                 data["supplier_id"],
                 invoice_number,
@@ -133,20 +139,45 @@ def create_purchase():
                 total_cartons,
                 transport_total,
                 mvat_amount,
-                tcs_amount
+                tcs_amount,
+                trade_discount,
+                bill_total_amount
             ))
         except Exception:
-            cursor.execute("""
-                INSERT INTO purchases
-                (supplier_id, invoice_no, purchase_date, total, shop_id)
-                VALUES (%s,%s,%s,%s,%s)
-            """, (
-                data["supplier_id"],
-                invoice_number,
-                purchase_date_val,
-                grand_total,
-                shop_id
-            ))
+            try:
+                cursor.execute("""
+                    INSERT INTO purchases
+                    (supplier_id, invoice_number, invoice_no, purchase_date, total_amount, total, remarks, payment_mode, shop_id,
+                     transport_per_carton, total_cartons, transport_total, mvat_amount, tcs_amount)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    data["supplier_id"],
+                    invoice_number,
+                    invoice_number,
+                    purchase_date_val,
+                    grand_total,
+                    grand_total,
+                    data.get("remarks", ""),
+                    data["payment_mode"],
+                    shop_id,
+                    transport_per_carton,
+                    total_cartons,
+                    transport_total,
+                    mvat_amount,
+                    tcs_amount
+                ))
+            except Exception:
+                cursor.execute("""
+                    INSERT INTO purchases
+                    (supplier_id, invoice_no, purchase_date, total, shop_id)
+                    VALUES (%s,%s,%s,%s,%s)
+                """, (
+                    data["supplier_id"],
+                    invoice_number,
+                    purchase_date_val,
+                    grand_total,
+                    shop_id
+                ))
 
         purchase_id = cursor.lastrowid
 
@@ -190,7 +221,7 @@ def create_purchase():
             paid_amt = grand_total
             bill_status = "paid"
 
-        notes_txt = f"Purchase {invoice_number}. MVAT: ₹{mvat_amount:.2f}, TCS: ₹{tcs_amount:.2f}. Transport: ₹{transport_total:.2f}. Remarks: {data.get('remarks', '')}".strip()
+        notes_txt = f"Purchase {invoice_number}. MVAT: ₹{mvat_amount:.2f}, TCS: ₹{tcs_amount:.2f}, Trade Discount: ₹{trade_discount:.2f}. Transport: ₹{transport_total:.2f}. Remarks: {data.get('remarks', '')}".strip()
 
         try:
             cursor.execute("""
